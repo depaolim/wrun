@@ -21,7 +21,8 @@ class AcceptanceTest(unittest.TestCase):
         def test_execute_with_param_P1(self):
             client = wrun.Client("localhost")
             result = client.run("sample.bat", "P1")
-            self.assertEqual(result, "{}\r\nhello P1\r\n".format(DIR_NAME))
+            expected = os.linesep.join([DIR_NAME, "hello P1", ""])
+            self.assertEqual(result, expected)
 
         def test_execute_with_param_P2(self):
             client = wrun.Client("localhost")
