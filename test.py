@@ -22,7 +22,7 @@ EXECUTABLE_PATH = os.path.join("test_executables", EXECUTABLE_NAME)
 class AcceptanceTest(unittest.TestCase):
         def setUp(self):
             self.daemon = subprocess.Popen(["python", "wrun/__init__.py", CWD])
-            time.sleep(0.5)
+            time.sleep(0.1)
             
         def tearDown(self):
             self.daemon.terminate()
