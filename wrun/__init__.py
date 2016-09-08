@@ -29,12 +29,15 @@ class Executor:
 
 
 class Server:
+    EXECUTOR_CLASS = Executor
+
     def __init__(self, exe_path, host="", port=3333):
         if not host:
             host = socket.gethostname()
         self.daemon = Pyro4.Daemon(host=host, port=port)
-        Executor.EXE_PATH = exe_path
-        self.uri = self.daemon.register(Executor, "Executor")
+        executor_class = self.EXECUTOR_CLASS
+        executor_class.EXE_PATH = exe_path
+        self.uri = self.daemon.register(executor_class, executor_class.__name__)
 
     def start(self):
         self.daemon.requestLoop()
