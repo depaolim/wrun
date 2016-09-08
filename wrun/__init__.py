@@ -10,15 +10,6 @@ import sys
 import Pyro4
 
 
-class Client:
-    def __init__(self, server, port):
-        uri = "PYRO:Executor@{}:{}".format(server, port)
-        self.proxy = Pyro4.Proxy(uri)
-
-    def run(self, exe_name, *args):
-        return self.proxy.run(exe_name, *args)
-
-
 class Executor:
     @Pyro4.expose
     def run(self, exe_name, *args):
@@ -44,6 +35,18 @@ class Server:
 
     def stop(self):
         self.daemon.shutdown()
+
+
+class Client:
+    EXECUTOR_CLASS_NAME = Executor.__name__
+
+    def __init__(self, server, port):
+        executor_class_name = self.EXECUTOR_CLASS_NAME
+        uri = "PYRO:{}@{}:{}".format(executor_class_name, server, port)
+        self.proxy = Pyro4.Proxy(uri)
+
+    def run(self, exe_name, *args):
+        return self.proxy.run(exe_name, *args)
 
 
 if __name__ == '__main__':
