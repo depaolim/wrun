@@ -11,8 +11,8 @@ import Pyro4
 
 
 class Client:
-    def __init__(self, server):
-        uri = "PYRO:Executor@{}:3333".format(server)
+    def __init__(self, server, port):
+        uri = "PYRO:Executor@{}:{}".format(server, port)
         self.proxy = Pyro4.Proxy(uri)
 
     def run(self, exe_name, *args):
@@ -31,10 +31,10 @@ class Executor:
 class Server:
     EXECUTOR_CLASS = Executor
 
-    def __init__(self, exe_path, host="", port=3333):
+    def __init__(self, exe_path, port, host=""):
         if not host:
             host = socket.gethostname()
-        self.daemon = Pyro4.Daemon(host=host, port=port)
+        self.daemon = Pyro4.Daemon(host=host, port=int(port))
         executor_class = self.EXECUTOR_CLASS
         executor_class.EXE_PATH = exe_path
         self.uri = self.daemon.register(executor_class, executor_class.__name__)
@@ -48,6 +48,6 @@ class Server:
 
 if __name__ == '__main__':
     # just for test purpose
-    exe_path = sys.argv[1]
-    s = Server(exe_path)
+    exe_path, port = sys.argv[1:]
+    s = Server(exe_path, port)
     s.start()
