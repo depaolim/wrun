@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+from ConfigParser import ConfigParser
 import os
 import socket
 import subprocess
@@ -46,12 +47,19 @@ class AcceptanceTest(unittest.TestCase):
 @unittest.skipIf(sys.platform != 'win32', "only on Win platforms")
 class WinServiceTest(unittest.TestCase):
     def setUp(self):
+        config = ConfigParser()
+        config.set('DEFAULT', 'SERVICE_NAME', 'TestWRUN')
+        config.set('DEFAULT', 'EXECUTABLE_PATH', EXECUTABLE_PATH)
+        config.set('DEFAULT', 'PORT', PORT)
+        with open("test.ini", "w") as f:
+            config.write(f)
         subprocess.check_call(["python", "win_service.py", "install"])
         subprocess.check_call(["python", "win_service.py", "start"])
 
     def tearDown(self):
         subprocess.check_call(["python", "win_service.py", "stop"])
         subprocess.check_call(["python", "win_service.py", "remove"])
+        os.remove("test.ini")
 
     def test(self):
         # execute
