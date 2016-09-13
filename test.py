@@ -25,7 +25,7 @@ PORT = "3333"
 class AcceptanceTest(unittest.TestCase):
     def setUp(self):
         self.daemon = subprocess.Popen(
-            ["python", "wrun/__init__.py", EXECUTABLE_PATH, PORT])
+            ["python", "wrun.py", EXECUTABLE_PATH, PORT])
         time.sleep(0.1)
         self.client = wrun.Client(HOST_NAME, PORT)
 
