@@ -15,7 +15,7 @@ class Executor:
     def run(self, exe_name, *args):
         cmd = [os.path.join(self.EXE_PATH, exe_name)]
         cmd.extend(args)
-        result = subprocess.check_output(cmd)
+        result = subprocess.check_output(cmd, cwd=self.EXE_PATH)
         return result
 
 

@@ -17,14 +17,15 @@ else:
     EXECUTABLE_NAME = "sample.sh"
 
 CWD = os.path.dirname(os.path.realpath(__file__))
-EXECUTABLE_PATH = os.path.join("test_executables", EXECUTABLE_NAME)
+EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
 HOST_NAME = socket.gethostname()
 PORT = "3333"
 
 
 class AcceptanceTest(unittest.TestCase):
     def setUp(self):
-        self.daemon = subprocess.Popen(["python", "wrun/__init__.py", CWD, PORT])
+        self.daemon = subprocess.Popen(
+            ["python", "wrun/__init__.py", EXECUTABLE_PATH, PORT])
         time.sleep(0.1)
         self.client = wrun.Client(HOST_NAME, PORT)
 
@@ -32,14 +33,33 @@ class AcceptanceTest(unittest.TestCase):
         self.daemon.terminate()
 
     def test_execute_with_param_P1(self):
-        result = self.client.run(EXECUTABLE_PATH, "P1")
-        expected = os.linesep.join([CWD, "hello P1", ""])
+        result = self.client.run(EXECUTABLE_NAME, "P1")
+        expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
         self.assertEqual(result, expected)
 
     def test_execute_with_param_P2(self):
-        result = self.client.run(EXECUTABLE_PATH, "P2")
-        expected = os.linesep.join([CWD, "hello P2", ""])
+        result = self.client.run(EXECUTABLE_NAME, "P2")
+        expected = os.linesep.join([EXECUTABLE_PATH, "hello P2", ""])
         self.assertEqual(result, expected)
+
+
+@unittest.skipIf(sys.platform != 'win32', "only on Win platforms")
+class WinServiceTest(unittest.TestCase):
+    def setUp(self):
+        subprocess.check_call(["python", "win_service.py", "install"])
+        subprocess.check_call(["python", "win_service.py", "start"])
+
+    def tearDown(self):
+        subprocess.check_call(["python", "win_service.py", "stop"])
+        subprocess.check_call(["python", "win_service.py", "remove"])
+
+    def test(self):
+        # execute
+        client = wrun.Client(HOST_NAME, PORT)
+        result = client.run(EXECUTABLE_NAME, "P1")
+        expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
+        self.assertEqual(result, expected)
+        # !!! check log
 
 
 if __name__ == '__main__':
