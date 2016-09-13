@@ -46,19 +46,21 @@ class AcceptanceTest(unittest.TestCase):
 
 @unittest.skipIf(sys.platform != 'win32', "only on Win platforms")
 class WinServiceTest(unittest.TestCase):
+    SERVICE_NAME = 'TestWRUN'
+    
     def setUp(self):
         config = ConfigParser()
-        config.set('DEFAULT', 'SERVICE_NAME', 'TestWRUN')
+        config.set('DEFAULT', 'SERVICE_NAME', self.SERVICE_NAME)
         config.set('DEFAULT', 'EXECUTABLE_PATH', EXECUTABLE_PATH)
         config.set('DEFAULT', 'PORT', PORT)
         with open("test.ini", "w") as f:
             config.write(f)
         subprocess.check_call(["python", "win_service.py", "install"])
-        subprocess.check_call(["python", "win_service.py", "start"])
+        subprocess.check_call(["sc", "start", self.SERVICE_NAME])
 
     def tearDown(self):
-        subprocess.check_call(["python", "win_service.py", "stop"])
-        subprocess.check_call(["python", "win_service.py", "remove"])
+        subprocess.check_call(["sc", "stop", self.SERVICE_NAME])
+        subprocess.check_call(["sc", "delete", self.SERVICE_NAME])
         os.remove("test.ini")
 
     def test(self):
