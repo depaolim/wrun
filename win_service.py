@@ -18,7 +18,7 @@ EXECUTABLE_PATH = config.get('DEFAULT', 'EXECUTABLE_PATH')
 PORT = config.get('DEFAULT', 'PORT')
 
 
-class DSLCMPlugInsSvc(win32serviceutil.ServiceFramework):
+class WRUNService(win32serviceutil.ServiceFramework):
     _svc_name_ = SERVICE_NAME
     _svc_display_name_ = SERVICE_NAME
 
@@ -35,4 +35,4 @@ class DSLCMPlugInsSvc(win32serviceutil.ServiceFramework):
 
 
 if __name__ == '__main__':
-    win32serviceutil.HandleCommandLine(DSLCMPlugInsSvc)
+    win32serviceutil.HandleCommandLine(WRUNService)
