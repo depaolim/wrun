@@ -3,29 +3,72 @@ Run Remote Windows Executables
 
 ## Installation
 
-    pip install wrun
+Install the last python 2.7 package (ex. Python 2.7.12)
+
+Install the last PyWin32 package for python 2.7 (ex. PyWin32 220)
+
+Clone the github repo (at the moment there is no proper setup)
+
+    git clone https://github.com/depaolim/wrun
+    
+Install other dependencies:
+
+    cd wrun
+    pip install -r requirements.txt
     
 ## Usage
 
-To initialize a settings file
+You can create a Windows Service and use it via wrun.Client
 
-    wrun create <path>
+#### Service Configuration
+
+Create a "ini" configuration file. Example wrun_service.ini:
+
+    [DEFAULT]
+    EXECUTABLE_PATH = C:\remote_activation
+    PORT = 3333
     
-To manage the windows service
+ Mandatory settings are:
+ * EXECUTABLE_PATH: absolute path of the directory where executables are stored
+ * PORT: daemon listening port
+ 
+ Optional settings are:
+ * HMACKEY: if specified activates a secure client-server communication. Must be the same on the two sides
 
-    wrun --settings <path> [command]
+#### Service Management
+
+Installation:
+
+    cd wrun
+    python win_service.py <service-name> <full-path-to-ini-file>
     
-Possible commands:
+Start/Stop/Delete the service:
 
-* install: create the windows service
-* start: start the service
-* stop: stop the service
-* remove: remove the windows service
+    sc start|stop|delete <service-name>
 
-Base settings contained in settings file:
+#### Client
 
-* SERVICE_NAME: Windows service name
-* PLUGINS_PATH: absolute path for executables
-* DAEMON_PORT: listening port for service
-* LOG_CONFIG: log configuration
-* HMAC_KEY: automatically generated at the wrun create, must be the same on client and server
+Sample code:
+
+    import wrun
+    
+    client = wrun.Client(REMOTE_HOST_NAME, "3331")
+    result = client.run("sample.exe", "first-param", "second-param")
+    print(result)
+ 
+ Some constraints:
+ 
+ * sample.exe must exit with exitcode 0. Otherwise an exception is raised
+ * result is the collected standard output of sample.exe
+ 
+The client does not need PyWin32, so you can use even a linux box as a client
+
+## Tests
+ 
+ To run the test cases:
+ 
+    cd wrun
+    python test.py
+ 
+ Some tests will be skipped if PyWin32 is not installed
+

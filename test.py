@@ -109,7 +109,7 @@ class WinServiceTest(unittest.TestCase):
         # !!! check log
 
 
-@unittest.skipIf(sys.platform != 'win32', "only on Win platforms")
+@unittest.skipIf(not pywin32_installed, "only with PyWin32 installed")
 class DoubleWinServiceTest(unittest.TestCase):
     def setUp(self):
         self.ini_1 = os.path.join(CWD, "test_1.ini")

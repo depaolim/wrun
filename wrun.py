@@ -6,7 +6,6 @@ import argparse
 import os.path
 import socket
 import subprocess
-import sys
 
 import Pyro4
 
