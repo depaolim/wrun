@@ -2,28 +2,39 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import os
+import sys
 from ConfigParser import ConfigParser
 
 import win32serviceutil
-import win32service
 
 import wrun
 
-CWD = os.path.dirname(os.path.realpath(__file__))
-config = ConfigParser()
-config.read(os.path.join(CWD, "test.ini"))
-SERVICE_NAME = config.get('DEFAULT', 'SERVICE_NAME')
-EXECUTABLE_PATH = config.get('DEFAULT', 'EXECUTABLE_PATH')
-PORT = config.get('DEFAULT', 'PORT')
+
+class ServiceParam:
+    def __init__(self, service_name, param_name="ini_file"):
+        self.service_name = service_name
+        self.param_name = param_name
+
+    def get(self):
+        return win32serviceutil.GetServiceCustomOption(self.service_name, self.param_name)
+
+    def set(self, value):
+        win32serviceutil.SetServiceCustomOption(self.service_name, self.param_name, value)
 
 
 class WRUNService(win32serviceutil.ServiceFramework):
-    _svc_name_ = SERVICE_NAME
-    _svc_display_name_ = SERVICE_NAME
+
+    def __init__(self, args):
+        self._svc_name_, = args
+        ini_file = ServiceParam(self._svc_name_).get()
+        config = ConfigParser()
+        config.read(ini_file)
+        self.executable_path = config.get('DEFAULT', 'EXECUTABLE_PATH')
+        self.port = config.get('DEFAULT', 'PORT')
+        win32serviceutil.ServiceFramework.__init__(self, args)
 
     def SvcDoRun(self):
-        self.service = wrun.Server(EXECUTABLE_PATH, PORT)
+        self.service = wrun.Server(self.executable_path, self.port)
         self.service.start()
 
     def SvcStop(self):
@@ -31,4 +42,8 @@ class WRUNService(win32serviceutil.ServiceFramework):
 
 
 if __name__ == '__main__':
-    win32serviceutil.HandleCommandLine(WRUNService)
+    # Service Installation
+    service_name, ini_file, = sys.argv[1:]
+    serviceClassString = win32serviceutil.GetServiceClassString(WRUNService)
+    win32serviceutil.InstallService(serviceClassString, service_name, service_name)
+    ServiceParam(service_name).set(ini_file)
