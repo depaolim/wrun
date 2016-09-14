@@ -10,6 +10,12 @@ import sys
 import time
 import unittest
 
+try:
+    import win32serviceutil  # noqa
+    pywin32_installed = True
+except ImportError:
+    pywin32_installed = False
+
 import wrun
 
 if sys.platform == 'win32':
@@ -30,7 +36,7 @@ def write_config(filepath, **kwargs):
         config.set('DEFAULT', k, v)
     with open(filepath, "w") as f:
         config.write(f)
-            
+
 
 class AcceptanceTest(unittest.TestCase):
     def setUp(self):
@@ -64,11 +70,13 @@ class AcceptanceSecureTest(unittest.TestCase):
 
     def test_cant_comunicate_without_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT)
-        self.assertRaises(wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
+        self.assertRaises(
+            wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
 
     def test_cant_comunicate_with_wrong_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT, "wronghmackey")
-        self.assertRaises(wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
+        self.assertRaises(
+            wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
 
     def test_cant_comunicate_only_with_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT, HMACKEY)
@@ -77,14 +85,15 @@ class AcceptanceSecureTest(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-@unittest.skipIf(sys.platform != 'win32', "only on Win platforms")
+@unittest.skipIf(not pywin32_installed, "only with PyWin32 installed")
 class WinServiceTest(unittest.TestCase):
     SERVICE_NAME = 'TestWRUN'
-    
+
     def setUp(self):
         self.ini_file = os.path.join(CWD, "test.ini")
         write_config(self.ini_file, EXECUTABLE_PATH=EXECUTABLE_PATH, PORT=PORT)
-        subprocess.check_call(["python", "win_service.py", self.SERVICE_NAME, self.ini_file])
+        subprocess.check_call(
+            ["python", "win_service.py", self.SERVICE_NAME, self.ini_file])
         subprocess.check_call(["sc", "start", self.SERVICE_NAME])
 
     def tearDown(self):
@@ -108,10 +117,12 @@ class DoubleWinServiceTest(unittest.TestCase):
         self.ini_2 = os.path.join(CWD, "test_2.ini")
         write_config(
             self.ini_1,
-            EXECUTABLE_PATH=os.path.join(CWD, "test_executables"), PORT="3331", HMACKEY=HMACKEY)
+            EXECUTABLE_PATH=os.path.join(CWD, "test_executables"),
+            PORT="3331", HMACKEY=HMACKEY)
         write_config(
             self.ini_2,
-            EXECUTABLE_PATH=os.path.join(CWD, "test_executables_2"), PORT="3332")
+            EXECUTABLE_PATH=os.path.join(CWD, "test_executables_2"),
+            PORT="3332")
 
     def tearDown(self):
         subprocess.check_call(["sc", "stop", "TestWRUN1"])
@@ -122,19 +133,24 @@ class DoubleWinServiceTest(unittest.TestCase):
         os.remove(self.ini_2)
 
     def test(self):
-        subprocess.check_call(["python", "win_service.py", "TestWRUN1", self.ini_1])
-        subprocess.check_call(["python", "win_service.py", "TestWRUN2", self.ini_2])
-        subprocess.check_call(["sc", "start", "TestWRUN1"])
+        subprocess.check_call(
+            ["python", "win_service.py", "TestWRUN1", self.ini_1])
+        subprocess.check_call(
+            ["python", "win_service.py", "TestWRUN2", self.ini_2])
+        subprocess.check_call(
+            ["sc", "start", "TestWRUN1"])
         subprocess.check_call(["sc", "start", "TestWRUN2"])
         self.assertRaises(
             wrun.CommunicationError,
             wrun.Client(HOST_NAME, "3331").run, EXECUTABLE_NAME, "P1")
         self.assertEqual(
             wrun.Client(HOST_NAME, "3331", HMACKEY).run(EXECUTABLE_NAME, "P1"),
-            os.linesep.join([os.path.join(CWD, "test_executables"), "hello P1", ""]))
+            os.linesep.join(
+                [os.path.join(CWD, "test_executables"), "hello P1", ""]))
         self.assertEqual(
             wrun.Client(HOST_NAME, "3332").run(EXECUTABLE_NAME, "P1"),
-            os.linesep.join([os.path.join(CWD, "test_executables_2"), "mandi P1", ""]))
+            os.linesep.join(
+                [os.path.join(CWD, "test_executables_2"), "mandi P1", ""]))
 
 
 if __name__ == '__main__':
