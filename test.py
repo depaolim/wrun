@@ -68,17 +68,17 @@ class AcceptanceSecureTest(unittest.TestCase):
     def tearDown(self):
         self.daemon.terminate()
 
-    def test_cant_comunicate_without_hmackey(self):
+    def test_can_not_comunicate_without_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT)
         self.assertRaises(
             wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
 
-    def test_cant_comunicate_with_wrong_hmackey(self):
+    def test_can_not_comunicate_with_wrong_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT, "wronghmackey")
         self.assertRaises(
             wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
 
-    def test_cant_comunicate_only_with_hmackey(self):
+    def test_can_comunicate_only_with_correct_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT, HMACKEY)
         result = client.run(EXECUTABLE_NAME, "P1")
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
@@ -102,7 +102,6 @@ class WinServiceTest(unittest.TestCase):
         os.remove(self.ini_file)
 
     def test(self):
-        # execute
         client = wrun.Client(HOST_NAME, PORT)
         result = client.run(EXECUTABLE_NAME, "P1")
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
