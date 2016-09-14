@@ -99,10 +99,8 @@ class DoubleWinServiceTest(unittest.TestCase):
     def test(self):
         subprocess.check_call(["python", "win_service.py", "TestWRUN1", self.ini_1])
         subprocess.check_call(["python", "win_service.py", "TestWRUN2", self.ini_2])
-        time.sleep(0.1)
         subprocess.check_call(["sc", "start", "TestWRUN1"])
         subprocess.check_call(["sc", "start", "TestWRUN2"])
-        time.sleep(0.1)
         self.assertEqual(
             wrun.Client(HOST_NAME, "3331").run(EXECUTABLE_NAME, "P1"),
             os.linesep.join([os.path.join(CWD, "test_executables"), "hello P1", ""]))
