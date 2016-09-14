@@ -21,6 +21,7 @@ CWD = os.path.dirname(os.path.realpath(__file__))
 EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
 HOST_NAME = socket.gethostname()
 PORT = "3333"
+HMACKEY = "supersecret"
 
 
 def write_config(filepath, **kwargs):
@@ -49,6 +50,30 @@ class AcceptanceTest(unittest.TestCase):
     def test_execute_with_param_P2(self):
         result = self.client.run(EXECUTABLE_NAME, "P2")
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P2", ""])
+        self.assertEqual(result, expected)
+
+
+class AcceptanceSecureTest(unittest.TestCase):
+    def setUp(self):
+        self.daemon = subprocess.Popen(
+            ["python", "wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY])
+        time.sleep(0.1)
+
+    def tearDown(self):
+        self.daemon.terminate()
+
+    def test_cant_comunicate_without_hmackey(self):
+        client = wrun.Client(HOST_NAME, PORT)
+        self.assertRaises(wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
+
+    def test_cant_comunicate_with_wrong_hmackey(self):
+        client = wrun.Client(HOST_NAME, PORT, "wronghmackey")
+        self.assertRaises(wrun.CommunicationError, client.run, EXECUTABLE_NAME, "P1")
+
+    def test_cant_comunicate_only_with_hmackey(self):
+        client = wrun.Client(HOST_NAME, PORT, HMACKEY)
+        result = client.run(EXECUTABLE_NAME, "P1")
+        expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
         self.assertEqual(result, expected)
 
 
