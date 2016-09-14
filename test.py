@@ -108,7 +108,7 @@ class DoubleWinServiceTest(unittest.TestCase):
         self.ini_2 = os.path.join(CWD, "test_2.ini")
         write_config(
             self.ini_1,
-            EXECUTABLE_PATH=os.path.join(CWD, "test_executables"), PORT="3331")
+            EXECUTABLE_PATH=os.path.join(CWD, "test_executables"), PORT="3331", HMACKEY=HMACKEY)
         write_config(
             self.ini_2,
             EXECUTABLE_PATH=os.path.join(CWD, "test_executables_2"), PORT="3332")
@@ -126,8 +126,11 @@ class DoubleWinServiceTest(unittest.TestCase):
         subprocess.check_call(["python", "win_service.py", "TestWRUN2", self.ini_2])
         subprocess.check_call(["sc", "start", "TestWRUN1"])
         subprocess.check_call(["sc", "start", "TestWRUN2"])
+        self.assertRaises(
+            wrun.CommunicationError,
+            wrun.Client(HOST_NAME, "3331").run, EXECUTABLE_NAME, "P1")
         self.assertEqual(
-            wrun.Client(HOST_NAME, "3331").run(EXECUTABLE_NAME, "P1"),
+            wrun.Client(HOST_NAME, "3331", HMACKEY).run(EXECUTABLE_NAME, "P1"),
             os.linesep.join([os.path.join(CWD, "test_executables"), "hello P1", ""]))
         self.assertEqual(
             wrun.Client(HOST_NAME, "3332").run(EXECUTABLE_NAME, "P1"),

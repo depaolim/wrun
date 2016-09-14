@@ -3,7 +3,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import sys
-from ConfigParser import ConfigParser
+from ConfigParser import ConfigParser, NoOptionError
 
 import win32serviceutil
 
@@ -22,19 +22,28 @@ class ServiceParam:
         win32serviceutil.SetServiceCustomOption(self.service_name, self.param_name, value)
 
 
+class DefaultConfigParser(ConfigParser):
+    def get(self, section, option, default=""):
+        try:
+            return ConfigParser.get(self, section, option)
+        except NoOptionError:
+            return default
+
+
 class WRUNService(win32serviceutil.ServiceFramework):
 
     def __init__(self, args):
         self._svc_name_, = args
         ini_file = ServiceParam(self._svc_name_).get()
-        config = ConfigParser()
+        config = DefaultConfigParser()
         config.read(ini_file)
         self.executable_path = config.get('DEFAULT', 'EXECUTABLE_PATH')
         self.port = config.get('DEFAULT', 'PORT')
+        self.hmackey = config.get('DEFAULT', 'HMACKEY', '')
         win32serviceutil.ServiceFramework.__init__(self, args)
 
     def SvcDoRun(self):
-        self.service = wrun.Server(self.executable_path, self.port)
+        self.service = wrun.Server(self.executable_path, self.port, self.hmackey)
         self.service.start()
 
     def SvcStop(self):
