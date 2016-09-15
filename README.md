@@ -28,11 +28,11 @@ Create a "ini" configuration file. Example wrun_service.ini:
     EXECUTABLE_PATH = C:\remote_activation
     PORT = 3333
     
- Mandatory settings are:
+Mandatory settings are:
  * EXECUTABLE_PATH: absolute path of the directory where executables are stored
  * PORT: daemon listening port
  
- Optional settings are:
+Optional settings are:
  * HMACKEY: if specified activates a secure client-server communication. Must be the same on the two sides
 
 #### Service Management
