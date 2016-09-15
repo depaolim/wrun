@@ -65,10 +65,16 @@ The client does not need PyWin32, so you can run it even on a linux box
 
 ## Tests
  
- To run the test cases:
+To run the test cases:
  
     cd wrun
     python test.py
  
- Some tests will be skipped if PyWin32 is not installed
+Some tests will be skipped if PyWin32 is not installed
 
+## TODO
+ 
+* Logging!!!
+* setup.py (pyPI?)
+* Travis-CI
+* py2exe
