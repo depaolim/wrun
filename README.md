@@ -5,7 +5,7 @@ Run Remote Windows Executables
 
 Install the last python 2.7 package (ex. Python 2.7.12)
 
-Install the last PyWin32 package for python 2.7 (ex. PyWin32 220)
+[Only for the Windows server Service] Install the last PyWin32 package for python 2.7 (ex. PyWin32 220)
 
 Clone the github repo (at the moment there is no proper setup)
 
@@ -52,7 +52,7 @@ Sample code:
 
     import wrun
     
-    client = wrun.Client(REMOTE_HOST_NAME, "3331")
+    client = wrun.Client(REMOTE_HOST_NAME, "3333")
     result = client.run("sample.exe", "first-param", "second-param")
     print(result)
  
@@ -61,7 +61,7 @@ Sample code:
  * sample.exe must exit with exitcode 0. Otherwise an exception is raised
  * result is the collected standard output of sample.exe
  
-The client does not need PyWin32, so you can use even a linux box as a client
+The client does not need PyWin32, so you can run it even on a linux box
 
 ## Tests
  
