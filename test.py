@@ -38,14 +38,26 @@ def write_config(filepath, **kwargs):
         config.write(f)
 
 
-class AcceptanceTest(unittest.TestCase):
+class LogTestMixin:
+    LOG_PATH = "wrun.log"
+
     def setUp(self):
+        os.remove(self.LOG_PATH)
+
+    def assertLogContains(self, expected):
+        self.assertIn(expected, open(self.LOG_PATH).read())
+
+
+class AcceptanceTest(LogTestMixin, unittest.TestCase):
+    def setUp(self):
+        super(AcceptanceTest, self).setUp()
         self.daemon = subprocess.Popen(
             ["python", "wrun.py", EXECUTABLE_PATH, PORT])
         time.sleep(0.1)
         self.client = wrun.Client(HOST_NAME, PORT)
 
     def tearDown(self):
+        super(AcceptanceTest, self).tearDown()
         self.daemon.terminate()
 
     def test_execute_with_param_P1(self):
@@ -57,6 +69,14 @@ class AcceptanceTest(unittest.TestCase):
         result = self.client.run(EXECUTABLE_NAME, "P2")
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P2", ""])
         self.assertEqual(result, expected)
+
+    def test_logging_P1(self):
+        self.client.run(EXECUTABLE_NAME, "P1")
+        self.assertLogContains("P1")
+
+    def test_logging_P2(self):
+        self.client.run(EXECUTABLE_NAME, "P2")
+        self.assertLogContains("P2")
 
 
 class AcceptanceSecureTest(unittest.TestCase):

@@ -13,9 +13,15 @@ import Pyro4
 CommunicationError = Pyro4.errors.CommunicationError
 
 
+def log(*args):
+    with open("wrun.log", "a") as l:
+        l.write(",".join(args))
+
+
 class Executor:
     @Pyro4.expose
     def run(self, exe_name, *args):
+        log(exe_name, *args)
         cmd = [os.path.join(self.EXE_PATH, exe_name)]
         cmd.extend(args)
         result = subprocess.check_output(cmd, cwd=self.EXE_PATH)
