@@ -3,6 +3,7 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 import argparse
+import logging
 import os.path
 import socket
 import subprocess
@@ -11,17 +12,13 @@ import Pyro4
 
 
 CommunicationError = Pyro4.errors.CommunicationError
-
-
-def log(*args):
-    with open("wrun.log", "a") as l:
-        l.write(",".join(args))
+logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
 
 
 class Executor:
     @Pyro4.expose
     def run(self, exe_name, *args):
-        log(exe_name, *args)
+        logging.debug("Executor.run %s %s", exe_name, " ".join(args))
         cmd = [os.path.join(self.EXE_PATH, exe_name)]
         cmd.extend(args)
         result = subprocess.check_output(cmd, cwd=self.EXE_PATH)
