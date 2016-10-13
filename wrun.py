@@ -5,14 +5,17 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import os.path
+import signal
 import socket
 import subprocess
+import sys
 
 import Pyro4
 
+SERVER = None
+
 
 CommunicationError = Pyro4.errors.CommunicationError
-logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
@@ -48,7 +51,8 @@ class Server:
         self.daemon.requestLoop()
 
     def stop(self):
-        self.daemon.shutdown()
+        logger.debug("Server stopping...")
+        self.daemon.close()
         logger.debug("Server stopped")
 
 
@@ -66,11 +70,23 @@ class Client:
         return self.proxy.run(exe_name, *args)
 
 
-if __name__ == '__main__':
+def main(argv):
+    global SERVER
     parser = argparse.ArgumentParser()
     parser.add_argument('exe_path')
     parser.add_argument('port')
     parser.add_argument('--hmackey')
-    args = parser.parse_args()
-    s = Server(args.exe_path, args.port, args.hmackey)
-    s.start()
+    args = parser.parse_args(argv)
+    logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
+    SERVER = Server(args.exe_path, args.port, args.hmackey)
+    SERVER.start()
+
+
+def sig_term_handler(signal, frame):
+    global SERVER
+    SERVER.stop()
+
+
+if __name__ == '__main__':
+    signal.signal(signal.SIGTERM, sig_term_handler)
+    main(sys.argv[1:])

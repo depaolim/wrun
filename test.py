@@ -38,27 +38,69 @@ def write_config(filepath, **kwargs):
         config.write(f)
 
 
-class LogTestMixin:
+class LogTestMixin(object):
     LOG_PATH = "wrun.log"
 
+    def _del_log(self):
+        try:
+            os.remove(self.LOG_PATH)
+        except OSError:
+            pass
+
+    def _get_log(self):
+        with open(self.LOG_PATH) as f:
+            return f.read()
+
     def setUp(self):
-        os.remove(self.LOG_PATH)
-
-    def assertLogContains(self, expected):
-        self.assertIn(expected, open(self.LOG_PATH).read())
-
-
-class AcceptanceTest(LogTestMixin, unittest.TestCase):
-    def setUp(self):
-        super(AcceptanceTest, self).setUp()
-        self.daemon = subprocess.Popen(
-            ["python", "wrun.py", EXECUTABLE_PATH, PORT])
-        time.sleep(0.1)
-        self.client = wrun.Client(HOST_NAME, PORT)
+        super(LogTestMixin, self).setUp()
+        self._del_log()
 
     def tearDown(self):
-        super(AcceptanceTest, self).tearDown()
-        self.daemon.terminate()
+        super(LogTestMixin, self).tearDown()
+        self._del_log()
+
+    def assertLogContains(self, expected):
+        self.assertIn(expected, self._get_log())
+
+
+class ProcessTestMixin(object):
+    def setUp(self):
+        super(ProcessTestMixin, self).setUp()
+        self.ps = []
+
+    def tearDown(self):
+        super(ProcessTestMixin, self).tearDown()
+        for p in self.ps:
+            p.terminate()
+
+    def run_process(self, *args):
+        p = subprocess.Popen(args)
+        self.ps.append(p)
+        time.sleep(0.1)
+        return len(self.ps) - 1
+
+    def stop_process(self, idx):
+        p = self.ps.pop(idx)
+        p.terminate()
+        time.sleep(0.1)
+
+
+class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
+    def test_start(self):
+        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        self.assertLogContains("Server starting")
+
+    def test_stop(self):
+        p_idx = self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        self.stop_process(p_idx)
+        self.assertLogContains("Server stopped")
+
+
+class AcceptanceTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
+    def setUp(self):
+        super(AcceptanceTest, self).setUp()
+        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        self.client = wrun.Client(HOST_NAME, PORT)
 
     def test_execute_with_param_P1(self):
         result = self.client.run(EXECUTABLE_NAME, "P1")
@@ -79,14 +121,10 @@ class AcceptanceTest(LogTestMixin, unittest.TestCase):
         self.assertLogContains("P2")
 
 
-class AcceptanceSecureTest(unittest.TestCase):
+class AcceptanceSecureTest(ProcessTestMixin, unittest.TestCase):
     def setUp(self):
-        self.daemon = subprocess.Popen(
-            ["python", "wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY])
-        time.sleep(0.1)
-
-    def tearDown(self):
-        self.daemon.terminate()
+        super(AcceptanceSecureTest, self).setUp()
+        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY)
 
     def test_can_not_comunicate_without_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT)
