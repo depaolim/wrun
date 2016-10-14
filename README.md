@@ -15,6 +15,11 @@ Install other dependencies:
 
     cd wrun
     pip install -r requirements.txt
+
+On POSIX (Linux, BSD, etc.) install the much more recent subprocess32:
+
+    cd wrun
+    pip install subprocess32
     
 ## Usage
 
