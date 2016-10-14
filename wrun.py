@@ -52,7 +52,7 @@ class Server:
 
     def stop(self):
         logger.debug("Server stopping...")
-        self.daemon.close()
+        self.daemon.shutdown()
         logger.debug("Server stopped")
 
 
