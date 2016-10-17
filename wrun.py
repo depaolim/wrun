@@ -57,7 +57,13 @@ class Server:
 
     def stop(self):
         logger.debug("Server stopping...")
-        self.daemon.shutdown()
+
+        # !!! TODO !!!
+        if sys.platform == 'win32':
+            self.daemon.shutdown()
+        else:
+            self.daemon.close()
+
         logger.debug("Server stopped")
 
 
