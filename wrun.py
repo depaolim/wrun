@@ -21,6 +21,7 @@ SERVER = None
 
 CommunicationError = Pyro4.errors.CommunicationError
 logger = logging.getLogger(__name__)
+logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
 
 
 class Executor:
@@ -81,7 +82,6 @@ def main(argv):
     parser.add_argument('port')
     parser.add_argument('--hmackey')
     args = parser.parse_args(argv)
-    logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
     SERVER = Server(args.exe_path, args.port, args.hmackey)
     SERVER.start()
 

@@ -152,9 +152,34 @@ class CommandTestMixin(object):
         ignore_errors = kwargs.pop("ignore_errors", False)
         try:
             subprocess.check_call(args)
+            time.sleep(0.5)
         except subprocess.CalledProcessError:
             if not ignore_errors:
                 raise
+
+
+@unittest.skipIf(not pywin32_installed, "only with PyWin32 installed")
+class WinServiceLogTest(LogTestMixin, CommandTestMixin, unittest.TestCase):
+    SERVICE_NAME = 'TestWRUN'
+
+    def setUp(self):
+        self.ini_file = os.path.join(CWD, "test.ini")
+        write_config(self.ini_file, EXECUTABLE_PATH=EXECUTABLE_PATH, PORT=PORT)
+        self._call("python", "win_service.py", self.SERVICE_NAME, self.ini_file)
+
+    def tearDown(self):
+        self._call("sc", "stop", self.SERVICE_NAME, ignore_errors=True)
+        self._call("sc", "delete", self.SERVICE_NAME, ignore_errors=True)
+        os.remove(self.ini_file)
+
+    def test_start(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self.assertLogContains("Server starting")
+
+    def test_stop(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self._call("sc", "stop", self.SERVICE_NAME)
+        self.assertLogContains("Server stopped")
 
 
 @unittest.skipIf(not pywin32_installed, "only with PyWin32 installed")
