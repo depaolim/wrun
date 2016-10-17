@@ -86,7 +86,7 @@ def main(argv):
     SERVER.start()
 
 
-def sig_term_handler(signal, frame):
+def sig_term_handler(sig, frame):
     global SERVER
     SERVER.stop()
 

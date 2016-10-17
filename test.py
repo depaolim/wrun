@@ -90,7 +90,7 @@ class ProcessTestMixin(object):
 
 
 class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
-    def _test_start(self):
+    def test_start(self):
         self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
         self.assertLogContains("Server starting")
 
