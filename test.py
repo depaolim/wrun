@@ -202,7 +202,6 @@ class WinServiceTest(CommandTestMixin, unittest.TestCase):
         result = client.run(EXECUTABLE_NAME, "P1")
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
         self.assertEqual(result, expected)
-        # !!! check log
 
 
 @unittest.skipIf(not pywin32_installed, "only with PyWin32 installed")
