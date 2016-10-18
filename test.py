@@ -220,10 +220,10 @@ class DoubleWinServiceTest(CommandTestMixin, unittest.TestCase):
             PORT="3332")
             
     def tearDown(self):
-        self._call("sc", "stop", "TestWRUN1", ignore_Errors=True)
-        self._call("sc", "stop", "TestWRUN2", ignore_Errors=True)
-        self._call("sc", "delete", "TestWRUN1", ignore_Errors=True)
-        self._call("sc", "delete", "TestWRUN2", ignore_Errors=True)
+        self._call("sc", "stop", "TestWRUN1", ignore_errors=True)
+        self._call("sc", "stop", "TestWRUN2", ignore_errors=True)
+        self._call("sc", "delete", "TestWRUN1", ignore_errors=True)
+        self._call("sc", "delete", "TestWRUN2", ignore_errors=True)
         os.remove(self.ini_1)
         os.remove(self.ini_2)
 
