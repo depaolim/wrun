@@ -1,4 +1,5 @@
 import multiprocessing
+import logging
 import os
 import signal
 import socket
@@ -11,13 +12,7 @@ SERVER_ADDRESS = ('localhost', 3333)
 BUFFER_SIZE = 255
 
 
-def log(msg, *args):
-    with open(LOG_PATH, "a") as f:
-        trace = msg % args
-        f.write(trace + "\n")
-
-
-log.info = log
+log = logging.getLogger(__name__)
 
 
 class Socket(socket.socket):
@@ -81,23 +76,15 @@ def client(server_address, request):
 
 
 class LogTestMixin(object):
-    def _del_log(self):
-        try:
-            os.remove(self.LOG_PATH)
-        except OSError:
-            pass
-
     def _get_log(self):
         with open(self.LOG_PATH) as f:
             return f.read()
 
     def setUp(self):
+        logging.basicConfig(filename=self.LOG_PATH, level=logging.DEBUG)
+        # log cleanup
+        logging.FileHandler(self.LOG_PATH, mode='w').close()
         super(LogTestMixin, self).setUp()
-        self._del_log()
-
-    def tearDown(self):
-        super(LogTestMixin, self).tearDown()
-        self._del_log()
 
     def assertLogContains(self, expected):
         self.assertIn(expected, self._get_log())
@@ -106,6 +93,20 @@ class LogTestMixin(object):
 class TestProcess(multiprocessing.Process):
     def kill(self):
         os.kill(self.pid, signal.SIGINT)
+
+
+class TestLog(LogTestMixin, unittest.TestCase):
+    LOG_PATH = LOG_PATH
+
+    def test_read_write_ok(self):
+        log.info("sample message")
+        self.assertLogContains("sample message")
+
+    def test_read_write_mismatch(self):
+        log.info("new message")
+        self.assertRaisesRegexp(
+            AssertionError, r"'sample message' not found in 'INFO:.*:new message",
+            self.assertLogContains, "sample message")
 
 
 class TestServer(LogTestMixin, unittest.TestCase):
@@ -132,9 +133,9 @@ class TestClient(LogTestMixin, unittest.TestCase):
         time.sleep(1)
 
     def tearDown(self):
-        super(TestClient, self).tearDown()
         self.s.kill()
         self.s.join()
+        super(TestClient, self).tearDown()
 
     def test_no_client(self):
         self.assertLogContains("waiting for a connection...")
