@@ -25,9 +25,9 @@ class Socket(socket.socket):
         super(Socket, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
 
 
-def daemon(execute=lambda request: request, condition=lambda: True):
+def daemon(server_address, execute=lambda request: request, condition=lambda: True):
     ss = Socket()
-    ss.bind(SERVER_ADDRESS)
+    ss.bind(server_address)
     ss.listen(1)
     try:
         while condition():
@@ -56,10 +56,10 @@ def daemon(execute=lambda request: request, condition=lambda: True):
         log.info("SERVER: closed server socket")
 
 
-def client(request):
+def client(server_address, request):
     ss = Socket()
-    log.info("CLIENT: connecting '%s' ...", SERVER_ADDRESS)
-    ss.connect(SERVER_ADDRESS)
+    log.info("CLIENT: connecting '%s' ...", server_address)
+    ss.connect(server_address)
     log.info("CLIENT: connected")
     log.info("CLIENT: sending '%s' ...", request)
     ss.sendall(request)
@@ -112,7 +112,7 @@ class TestServer(LogTestMixin, unittest.TestCase):
     LOG_PATH = LOG_PATH
 
     def test_start_stop(self):
-        self.s = TestProcess(target=daemon)
+        self.s = TestProcess(target=daemon, args=(SERVER_ADDRESS,))
         self.s.start()
         time.sleep(1)
         self.s.kill()
@@ -127,7 +127,7 @@ class TestClient(LogTestMixin, unittest.TestCase):
 
     def setUp(self):
         super(TestClient, self).setUp()
-        self.s = TestProcess(target=daemon)
+        self.s = TestProcess(target=daemon, args=(SERVER_ADDRESS,))
         self.s.start()
         time.sleep(1)
 
@@ -140,7 +140,7 @@ class TestClient(LogTestMixin, unittest.TestCase):
         self.assertLogContains("waiting for a connection...")
 
     def test_client_connect(self):
-        self.assertEqual(client("prova"), "prova")
+        self.assertEqual(client(SERVER_ADDRESS, "prova"), "prova")
         time.sleep(1)
         self.assertLogContains("CLIENT: connecting '('localhost', 3333)' ...")
         self.assertLogContains("CLIENT: connected")
