@@ -77,8 +77,8 @@ class ProcessTestMixin(object):
         for p in self.ps:
             p.terminate()
 
-    def run_process(self, *args):
-        p = subprocess.Popen(args)
+    def run_python(self, *args):
+        p = subprocess.Popen([sys.executable] + list(args))
         self.ps.append(p)
         time.sleep(0.5)
         return len(self.ps) - 1
@@ -91,11 +91,11 @@ class ProcessTestMixin(object):
 
 class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
     def test_start(self):
-        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
         self.assertLogContains("Server starting")
 
     def _test_stop(self):
-        p_idx = self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        p_idx = self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
         self.stop_process(p_idx)
         self.assertLogContains("Server stopped")
 
@@ -103,7 +103,7 @@ class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
 class AcceptanceTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
     def setUp(self):
         super(AcceptanceTest, self).setUp()
-        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT)
+        self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
         self.client = wrun.Client(HOST_NAME, PORT)
 
     def test_execute_with_param_P1(self):
@@ -128,7 +128,7 @@ class AcceptanceTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
 class AcceptanceSecureTest(ProcessTestMixin, unittest.TestCase):
     def setUp(self):
         super(AcceptanceSecureTest, self).setUp()
-        self.run_process("python", "wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY)
+        self.run_python("wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY)
 
     def test_can_not_comunicate_without_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT)
