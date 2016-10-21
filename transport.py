@@ -141,6 +141,7 @@ class Test(LogTestMixin, unittest.TestCase):
     def test_server_is_listening(self):
         self.assertLogContains("waiting for a connection...")
 
+    @unittest.skipIf(sys.platform == 'win32', "no clean shutdown on Windows")
     def test_server_shutdown(self):
         self.s.kill()
         self.s.join()
