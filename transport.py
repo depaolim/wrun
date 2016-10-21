@@ -75,15 +75,18 @@ def client(server_address, request):
     return response
 
 
+def init_test_log(path):
+    logging.basicConfig(filename=path, level=logging.DEBUG, filemode='a')
+    logging.FileHandler(path, mode='w').close() # log cleanup
+
+
 class LogTestMixin(object):
     def _get_log(self):
         with open(self.LOG_PATH) as f:
             return f.read()
 
     def setUp(self):
-        logging.basicConfig(filename=self.LOG_PATH, level=logging.DEBUG)
-        # log cleanup
-        logging.FileHandler(self.LOG_PATH, mode='w').close()
+        init_test_log(self.LOG_PATH)
         super(LogTestMixin, self).setUp()
 
     def assertLogContains(self, expected):
@@ -92,7 +95,10 @@ class LogTestMixin(object):
 
 class TestProcess(multiprocessing.Process):
     def kill(self):
-        os.kill(self.pid, signal.SIGINT)
+        if sys.platform == 'win32':
+            self.terminate()
+        else:
+            os.kill(self.pid, signal.SIGINT)
 
 
 class TestLog(LogTestMixin, unittest.TestCase):
@@ -109,36 +115,37 @@ class TestLog(LogTestMixin, unittest.TestCase):
             self.assertLogContains, "sample message")
 
 
-class TestServer(LogTestMixin, unittest.TestCase):
-    LOG_PATH = LOG_PATH
-
-    def test_start_stop(self):
-        self.s = TestProcess(target=daemon, args=(SERVER_ADDRESS,))
-        self.s.start()
-        time.sleep(1)
-        self.s.kill()
-        self.s.join()
-        self.assertLogContains("waiting for a connection...")
-        self.assertLogContains("closing server socket...")
-        self.assertLogContains("closed server socket")
+def test_daemon(log_path, *args):
+    init_test_log(log_path)
+    daemon(*args)
 
 
-class TestClient(LogTestMixin, unittest.TestCase):
+class Test(LogTestMixin, unittest.TestCase):
     LOG_PATH = LOG_PATH
 
     def setUp(self):
-        super(TestClient, self).setUp()
-        self.s = TestProcess(target=daemon, args=(SERVER_ADDRESS,))
+        super(Test, self).setUp()
+        self.s = TestProcess(target=test_daemon, args=(self.LOG_PATH, SERVER_ADDRESS,))
         self.s.start()
         time.sleep(1)
 
     def tearDown(self):
+        try:
+            self.s.kill()
+        except OSError, e:
+            # process already killed
+            pass
+        self.s.join()
+        super(Test, self).tearDown()
+
+    def test_server_is_listening(self):
+        self.assertLogContains("waiting for a connection...")
+
+    def test_server_shutdown(self):
         self.s.kill()
         self.s.join()
-        super(TestClient, self).tearDown()
-
-    def test_no_client(self):
-        self.assertLogContains("waiting for a connection...")
+        self.assertLogContains("closing server socket...")
+        self.assertLogContains("closed server socket")
 
     def test_client_connect(self):
         self.assertEqual(client(SERVER_ADDRESS, "prova"), "prova")
