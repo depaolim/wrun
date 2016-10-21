@@ -21,7 +21,6 @@ SERVER = None
 
 CommunicationError = Pyro4.errors.CommunicationError
 log = logging.getLogger(__name__)
-logging.basicConfig(filename='wrun.log', level=logging.DEBUG)
 
 
 class Executor:

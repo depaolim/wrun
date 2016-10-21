@@ -3,6 +3,8 @@ from __future__ import print_function
 from __future__ import unicode_literals
 
 from ConfigParser import ConfigParser
+import logging
+import multiprocessing
 import os
 import socket
 import sys
@@ -45,23 +47,15 @@ def write_config(filepath, **kwargs):
 class LogTestMixin(object):
     LOG_PATH = "wrun.log"
 
-    def _del_log(self):
-        try:
-            os.remove(self.LOG_PATH)
-        except OSError:
-            pass
-
     def _get_log(self):
         with open(self.LOG_PATH) as f:
             return f.read()
 
     def setUp(self):
         super(LogTestMixin, self).setUp()
-        self._del_log()
-
-    def tearDown(self):
-        super(LogTestMixin, self).tearDown()
-        self._del_log()
+        logging.basicConfig(filename=self.LOG_PATH, level=logging.DEBUG)
+        # log cleanup
+        logging.FileHandler(self.LOG_PATH, mode='w').close()
 
     def assertLogContains(self, expected):
         self.assertIn(expected, self._get_log())
@@ -77,8 +71,9 @@ class ProcessTestMixin(object):
         for p in self.ps:
             p.terminate()
 
-    def run_python(self, *args):
-        p = subprocess.Popen([sys.executable] + list(args))
+    def run_main(self, *args):
+        p = multiprocessing.Process(target=wrun.main, args=(args, ))
+        p.start()
         self.ps.append(p)
         time.sleep(0.5)
         return len(self.ps) - 1
@@ -86,16 +81,16 @@ class ProcessTestMixin(object):
     def stop_process(self, idx):
         p = self.ps.pop(idx)
         p.terminate()
-        time.sleep(0.5)
+        p.join()
 
 
 class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
     def test_start(self):
-        self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
+        self.run_main(EXECUTABLE_PATH, PORT)
         self.assertLogContains("Server starting")
 
     def _test_stop(self):
-        p_idx = self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
+        p_idx = self.run_main(EXECUTABLE_PATH, PORT)
         self.stop_process(p_idx)
         self.assertLogContains("Server stopped")
 
@@ -103,7 +98,7 @@ class LogTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
 class AcceptanceTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
     def setUp(self):
         super(AcceptanceTest, self).setUp()
-        self.run_python("wrun.py", EXECUTABLE_PATH, PORT)
+        self.run_main(EXECUTABLE_PATH, PORT)
         self.client = wrun.Client(HOST_NAME, PORT)
 
     def test_execute_with_param_P1(self):
@@ -128,7 +123,7 @@ class AcceptanceTest(LogTestMixin, ProcessTestMixin, unittest.TestCase):
 class AcceptanceSecureTest(ProcessTestMixin, unittest.TestCase):
     def setUp(self):
         super(AcceptanceSecureTest, self).setUp()
-        self.run_python("wrun.py", EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY)
+        self.run_main(EXECUTABLE_PATH, PORT, "--hmackey", HMACKEY)
 
     def test_can_not_comunicate_without_hmackey(self):
         client = wrun.Client(HOST_NAME, PORT)
