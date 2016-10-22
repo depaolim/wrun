@@ -8,13 +8,9 @@ import multiprocessing
 import os
 import socket
 import sys
+import subprocess
 import time
 import unittest
-
-if os.name == 'posix' and sys.version_info[0] < 3:
-    import subprocess32 as subprocess
-else:
-    import subprocess
 
 try:
     import win32serviceutil  # noqa
