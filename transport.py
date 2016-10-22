@@ -125,11 +125,11 @@ class ProcessFunc(object):
 class TestClientServer(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
-    def start(self, func, *args):
+    def _run_process_func(self, func, *args):
         return ProcessFunc(lambda: self.logged_func(func, *args))
 
     def setUp(self):
-        self.s = self.start(daemon, self.SERVER_ADDRESS,)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS,)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
@@ -144,7 +144,7 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
         self.assertLogContains(daemon, "closed server socket")
 
     def test_client_connect(self):
-        c = self.start(client, self.SERVER_ADDRESS, "prova")
+        c = self._run_process_func(client, self.SERVER_ADDRESS, "prova")
         c.stop()
         self.assertEqual(c.result, "prova")
         self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
