@@ -1,3 +1,4 @@
+import StringIO
 import multiprocessing
 import logging
 import os
@@ -91,6 +92,7 @@ class LogTestMixin(object):
     @classmethod
     def logged_func(cls, func, *args):
         cls.init_log_file(cls._log_path(func))
+        sys.stderr = StringIO.StringIO()  # ignore stderr
         return func(*args)
 
     def assertLogContains(self, func, expected):
