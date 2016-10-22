@@ -111,12 +111,8 @@ class TestProcess(multiprocessing.Process):
         time.sleep(0.5)
 
     def stop(self, ignore_errors=False):
-        try:
+        if not ignore_errors or self.is_alive():
             self._kill()
-        except OSError:
-            # process already killed
-            if not ignore_errors:
-                raise
         self.join()
 
     @property
