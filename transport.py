@@ -89,10 +89,9 @@ class LogTestMixin(object):
         logging.FileHandler(path, mode='w').close()  # log cleanup
 
     @classmethod
-    def logged_func(cls, func, callback, *args):
+    def logged_func(cls, func, *args):
         cls.init_log_file(cls._log_path(func))
-        result = func(*args)
-        callback(result)
+        return func(*args)
 
     def assertLogContains(self, func, expected):
         self.assertIn(expected, self._get_log(self._log_path(func)))
@@ -104,6 +103,12 @@ class TestProcess(multiprocessing.Process):
             self.terminate()
         else:
             os.kill(self.pid, signal.SIGINT)
+
+    def __init__(self, func):
+        self._queue = multiprocessing.Queue()
+        super(TestProcess, self).__init__(target=lambda: self._queue.put(func()))
+        self.start()
+        time.sleep(0.5)
 
     def stop(self, ignore_errors=False):
         try:
@@ -123,12 +128,7 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
     def start(self, func, *args):
-        q = multiprocessing.Queue()
-        p = TestProcess(target=lambda *_args: self.logged_func(func, q.put, *_args), args=args)
-        p.start()
-        p._queue = q
-        time.sleep(0.5)
-        return p
+        return TestProcess(lambda: self.logged_func(func, *args))
 
     def setUp(self):
         self.s = self.start(daemon, self.SERVER_ADDRESS,)
