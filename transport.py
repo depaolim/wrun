@@ -74,119 +74,100 @@ def client(server_address, request):
 
 
 class LogTestMixin(object):
-    SERVER_LOG_PATH = "transport_daemon.log"
-    CLIENT_LOG_PATH = "transport_client.log"
-
     @staticmethod
     def _get_log(path):
         with open(path) as f:
             return f.read()
 
     @staticmethod
+    def _log_path(func):
+        return "transport_" + func.func_name + ".log"
+
+    @staticmethod
     def init_log_file(path):
-        print("init_log_file START", os.getpid(), path)
         logging.basicConfig(filename=path, level=logging.DEBUG, filemode='a')
         logging.FileHandler(path, mode='w').close()  # log cleanup
-        print("init_log_file END", logging.Logger.manager.loggerDict.keys())
 
     @classmethod
-    def logged_func(cls, func, queue, *args):
-        cls.init_log_file("transport_" + func.func_name + ".log")
-        print("RUN START", func.func_name)
+    def logged_func(cls, func, callback, *args):
+        cls.init_log_file(cls._log_path(func))
         result = func(*args)
-        print("RUN END", func.func_name, result)
-        queue.put(result)
+        callback(result)
 
-    def assertServerLogContains(self, expected):
-        slog = self._get_log(self.SERVER_LOG_PATH)
-        clog = self._get_log(self.CLIENT_LOG_PATH)
-        print("SERVER", expected, expected in slog, slog)
-        self.assertIn(expected, slog)
-
-    def assertClientLogContains(self, expected):
-        slog = self._get_log(self.SERVER_LOG_PATH)
-        clog = self._get_log(self.CLIENT_LOG_PATH)
-        print("CLIENT", expected, expected in clog, clog)
-        self.assertIn(expected, clog)
-
-
-class TestLogClient(LogTestMixin, unittest.TestCase):
-    def test_read_write_ok(self):
-        log.info("sample message")
-        self.assertClientLogContains("sample message")
-
-    def test_read_write_mismatch(self):
-        log.info("new message")
-        self.assertRaisesRegexp(
-            AssertionError, r"'sample message' not found in 'INFO:.*:new message",
-            self.assertClientLogContains, "sample message")
+    def assertLogContains(self, func, expected):
+        self.assertIn(expected, self._get_log(self._log_path(func)))
 
 
 class TestProcess(multiprocessing.Process):
-    def kill(self):
+    def _kill(self):
         if sys.platform == 'win32':
             self.terminate()
         else:
             os.kill(self.pid, signal.SIGINT)
 
+    def stop(self, ignore_errors=False):
+        try:
+            self._kill()
+        except OSError:
+            # process already killed
+            if not ignore_errors:
+                raise
+        self.join()
+
+    @property
+    def result(self):
+        return self._queue.get()
+
 
 class TestClientServer(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
-    def setUp(self):
+    def start(self, func, *args):
         q = multiprocessing.Queue()
-        self.s = TestProcess(target=lambda ad: self.logged_func(daemon, q, ad), args=(self.SERVER_ADDRESS,))
-        self.s.start()
-        time.sleep(1)
-        #super(TestClientServer, self).setUp()
+        p = TestProcess(target=lambda *_args: self.logged_func(func, q.put, *_args), args=args)
+        p.start()
+        p._queue = q
+        time.sleep(0.5)
+        return p
+
+    def setUp(self):
+        self.s = self.start(daemon, self.SERVER_ADDRESS,)
 
     def tearDown(self):
-        #super(TestClientServer, self).tearDown()
-        try:
-            self.s.kill()
-        except OSError:
-            # process already killed
-            pass
-        self.s.join()
+        self.s.stop(ignore_errors=True)
 
     def test_server_is_listening(self):
-        self.assertServerLogContains("waiting for a connection...")
+        self.assertLogContains(daemon, "waiting for a connection...")
 
     @unittest.skipIf(sys.platform == 'win32', "no clean shutdown on Windows")
     def test_server_shutdown(self):
-        self.s.kill()
-        self.s.join()
-        self.assertServerLogContains("closing server socket...")
-        self.assertServerLogContains("closed server socket")
+        self.s.stop()
+        self.assertLogContains(daemon, "closing server socket...")
+        self.assertLogContains(daemon, "closed server socket")
 
     def test_client_connect(self):
-        #self.assertEqual(client(self.SERVER_ADDRESS, "prova"), "prova")
-        q = multiprocessing.Queue()
-        c = TestProcess(target=lambda ad, msg: self.logged_func(client, q, ad, msg), args=(self.SERVER_ADDRESS, "prova"))
-        c.start()
-        time.sleep(1)
-        c.kill()
-        c.join()
-        self.assertEqual(q.get(), "prova")
-        self.assertClientLogContains("CLIENT: connecting '('localhost', 3333)' ...")
-        self.assertClientLogContains("CLIENT: connected")
-        self.assertClientLogContains("CLIENT: sending 'prova'")
-        self.assertClientLogContains("CLIENT: sent")
-        self.assertClientLogContains("CLIENT: receiving...")
-        self.assertServerLogContains("SERVER: connection from ('127.0.0.1', ")
-        self.assertServerLogContains("SERVER: receiving...")
-        self.assertServerLogContains("SERVER: received 'prova'")
-        self.assertServerLogContains("SERVER: received ''")
-        self.assertServerLogContains("SERVER: no more data to receive")
-        self.assertServerLogContains("SERVER: sending 'prova'")
-        self.assertServerLogContains("SERVER: sent")
-        self.assertServerLogContains("SERVER: closing client socket")
-        self.assertServerLogContains("SERVER: closed client socket")
-        self.assertClientLogContains("CLIENT: received 'prova'")
-        self.assertClientLogContains("CLIENT: received ''")
-        self.assertClientLogContains("CLIENT: no more data to receive")
-        self.assertClientLogContains("CLIENT: closing")
-        self.assertClientLogContains("CLIENT: closed")
+        c = self.start(client, self.SERVER_ADDRESS, "prova")
+        c.stop()
+        self.assertEqual(c.result, "prova")
+        self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
+        self.assertLogContains(client, "CLIENT: connected")
+        self.assertLogContains(client, "CLIENT: sending 'prova'")
+        self.assertLogContains(client, "CLIENT: sent")
+        self.assertLogContains(client, "CLIENT: receiving...")
+        self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
+        self.assertLogContains(daemon, "SERVER: receiving...")
+        self.assertLogContains(daemon, "SERVER: received 'prova'")
+        self.assertLogContains(daemon, "SERVER: received ''")
+        self.assertLogContains(daemon, "SERVER: no more data to receive")
+        self.assertLogContains(daemon, "SERVER: sending 'prova'")
+        self.assertLogContains(daemon, "SERVER: sent")
+        self.assertLogContains(daemon, "SERVER: closing client socket")
+        self.assertLogContains(daemon, "SERVER: closed client socket")
+        self.assertLogContains(client, "CLIENT: received 'prova'")
+        self.assertLogContains(client, "CLIENT: received ''")
+        self.assertLogContains(client, "CLIENT: no more data to receive")
+        self.assertLogContains(client, "CLIENT: closing")
+        self.assertLogContains(client, "CLIENT: closed")
 
 
 
