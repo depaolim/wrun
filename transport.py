@@ -99,23 +99,23 @@ class LogTestMixin(object):
         self.assertIn(expected, self._get_log(self._log_path(func)))
 
 
-class TestProcess(multiprocessing.Process):
+class ProcessFunc(object):
     def _kill(self):
         if sys.platform == 'win32':
-            self.terminate()
+            self._process.terminate()
         else:
-            os.kill(self.pid, signal.SIGINT)
+            os.kill(self._process.pid, signal.SIGINT)
 
     def __init__(self, func):
         self._queue = multiprocessing.Queue()
-        super(TestProcess, self).__init__(target=lambda: self._queue.put(func()))
-        self.start()
+        self._process = multiprocessing.Process(target=lambda: self._queue.put(func()))
+        self._process.start()
         time.sleep(0.5)
 
     def stop(self, ignore_errors=False):
-        if not ignore_errors or self.is_alive():
+        if not ignore_errors or self._process.is_alive():
             self._kill()
-        self.join()
+        self._process.join()
 
     @property
     def result(self):
@@ -126,7 +126,7 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
     def start(self, func, *args):
-        return TestProcess(lambda: self.logged_func(func, *args))
+        return ProcessFunc(lambda: self.logged_func(func, *args))
 
     def setUp(self):
         self.s = self.start(daemon, self.SERVER_ADDRESS,)
