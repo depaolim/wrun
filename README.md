@@ -73,8 +73,13 @@ To run the test cases:
 Some tests will be skipped if PyWin32 is not installed
 
 ## TODO
- 
-* Logging!!!
+
 * setup.py (pyPI?)
 * Travis-CI
 * py2exe
+
+## TODO (for wrun2 with sockets)
+
+* manage error in subprocess
+* hmac
+* collect stdout/stderr/returncode

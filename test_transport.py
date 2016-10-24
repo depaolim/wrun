@@ -48,10 +48,13 @@ class ProcessFunc(object):
         self._process.start()
         time.sleep(0.5)
 
+    def join(self):
+        self._process.join()
+
     def stop(self, ignore_errors=False):
         if not ignore_errors or self._process.is_alive():
             self._kill()
-        self._process.join()
+        self.join()
 
     @property
     def result(self):
@@ -81,7 +84,7 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
 
     def test_client_connect(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, "prova")
-        c.stop()
+        c.join()
         self.assertEqual(c.result, "prova")
         self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
         self.assertLogContains(client, "CLIENT: connected")
