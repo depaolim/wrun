@@ -18,7 +18,7 @@ class Socket(socket.socket):
         super(Socket, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
 
 
-def daemon(server_address, execute=lambda request: request, condition=lambda: True):
+def daemon(server_address, execute, condition=lambda: True):
     ss = Socket()
     ss.bind(server_address)
     ss.listen(1)

@@ -21,7 +21,7 @@ CWD = os.path.dirname(os.path.realpath(__file__))
 EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
 
 
-class TLogTestMixin(object):
+class LogTestMixin(object):
     @staticmethod
     def _get_log(path):
         with open(path) as f:
@@ -71,14 +71,18 @@ class ProcessFunc(object):
         return self._queue.get()
 
 
-class TestClientServer(TLogTestMixin, unittest.TestCase):
+class TestClientServer(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
     def _run_process_func(self, func, *args):
         return ProcessFunc(lambda: self.logged_func(func, *args))
 
+    @staticmethod
+    def echo(request):
+        return request
+
     def setUp(self):
-        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS,)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.echo)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
@@ -92,7 +96,7 @@ class TestClientServer(TLogTestMixin, unittest.TestCase):
         self.assertLogContains(daemon, "closing server socket...")
         self.assertLogContains(daemon, "closed server socket")
 
-    def test_client_connect(self):
+    def test_client_request(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, "prova")
         c.join()
         self.assertEqual(c.result, "prova")
@@ -131,7 +135,7 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(result, expected)
 
 
-class TestAcceptance(TLogTestMixin, unittest.TestCase):
+class TestAcceptance(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
     def _run_process_func(self, func, *args):
@@ -154,7 +158,7 @@ class TestAcceptance(TLogTestMixin, unittest.TestCase):
         self.assertLogContains(daemon, "closing server socket...")
         self.assertLogContains(daemon, "closed server socket")
 
-    def test_client_connect(self):
+    def test_client_request(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, json.dumps([EXECUTABLE_NAME, ["P1"]]))
         c.join()
         expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
