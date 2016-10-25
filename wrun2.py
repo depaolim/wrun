@@ -78,5 +78,10 @@ def executor(exe_path, command):
     log.debug("executor %s %s", exe_name, " ".join(args))
     cmd = [os.path.join(exe_path, exe_name)]
     cmd.extend(args)
-    result = subprocess.check_output(cmd, cwd=exe_path)
-    return result
+    try:
+        output = subprocess.check_output(cmd, cwd=exe_path)
+        returncode = 0
+    except subprocess.CalledProcessError as cpe:
+        output = cpe.output
+        returncode = cpe.returncode
+    return json.dumps({"output": output, "returncode": returncode})

@@ -125,14 +125,20 @@ class TestExecutor(unittest.TestCase):
     def test_run_P1(self):
         command = [EXECUTABLE_NAME, ["P1"]]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
-        expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
-        self.assertEqual(result, expected)
+        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), "returncode": 0}
+        self.assertEqual(json.loads(result), expected)
 
     def test_run_P2(self):
         command = [EXECUTABLE_NAME, ["P2"]]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
-        expected = os.linesep.join([EXECUTABLE_PATH, "hello P2", ""])
-        self.assertEqual(result, expected)
+        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P2", ""]), "returncode": 0}
+        self.assertEqual(json.loads(result), expected)
+
+    def test_run_ERROR(self):
+        command = [EXECUTABLE_NAME, ["ERROR"]]
+        result = executor(EXECUTABLE_PATH, json.dumps(command))
+        expected = {"output": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
+        self.assertEqual(json.loads(result), expected)
 
 
 class TestAcceptance(LogTestMixin, unittest.TestCase):
@@ -149,39 +155,19 @@ class TestAcceptance(LogTestMixin, unittest.TestCase):
     def tearDown(self):
         self.s.stop(ignore_errors=True)
 
-    def test_server_is_listening(self):
-        self.assertLogContains(daemon, "waiting for a connection...")
-
-    @unittest.skipIf(sys.platform == 'win32', "no clean shutdown on Windows")
-    def test_server_shutdown(self):
-        self.s.stop()
-        self.assertLogContains(daemon, "closing server socket...")
-        self.assertLogContains(daemon, "closed server socket")
-
     def test_client_request(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, json.dumps([EXECUTABLE_NAME, ["P1"]]))
         c.join()
-        expected = os.linesep.join([EXECUTABLE_PATH, "hello P1", ""])
-        self.assertEqual(c.result, expected)
-        self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
-        self.assertLogContains(client, "CLIENT: connected")
-        self.assertLogContains(client, "CLIENT: sending '[\"sample.sh\", [\"P1\"]]'")
-        self.assertLogContains(client, "CLIENT: sent")
-        self.assertLogContains(client, "CLIENT: receiving...")
-        self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
-        self.assertLogContains(daemon, "SERVER: receiving...")
-        self.assertLogContains(daemon, "SERVER: received '[\"sample.sh\", [\"P1\"]]'")
-        self.assertLogContains(daemon, "SERVER: received ''")
-        self.assertLogContains(daemon, "SERVER: no more data to receive")
-        self.assertLogContains(daemon, "SERVER: sending '{}'".format(expected))
-        self.assertLogContains(daemon, "SERVER: sent")
-        self.assertLogContains(daemon, "SERVER: closing client socket")
-        self.assertLogContains(daemon, "SERVER: closed client socket")
-        self.assertLogContains(client, "CLIENT: received '{}'".format(expected))
-        self.assertLogContains(client, "CLIENT: received ''")
-        self.assertLogContains(client, "CLIENT: no more data to receive")
-        self.assertLogContains(client, "CLIENT: closing")
-        self.assertLogContains(client, "CLIENT: closed")
+        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), "returncode": 0}
+        result_dict = json.loads(c.result)
+        self.assertEqual(result_dict, expected)
+
+    def test_client_request_error(self):
+        c = self._run_process_func(client, self.SERVER_ADDRESS, json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
+        c.join()
+        expected = {"output": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
+        result_dict = json.loads(c.result)
+        self.assertEqual(result_dict, expected)
 
 
 if __name__ == '__main__':
