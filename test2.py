@@ -78,11 +78,11 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
         return ProcessFunc(lambda: self.logged_func(func, *args))
 
     @staticmethod
-    def echo(request):
-        return request
+    def revert(request):
+        return request[::-1]
 
     def setUp(self):
-        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.echo)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.revert)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
@@ -99,7 +99,7 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
     def test_client_request(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, "prova")
         c.join()
-        self.assertEqual(c.result, "prova")
+        self.assertEqual(c.result, "avorp")
         self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
         self.assertLogContains(client, "CLIENT: connected")
         self.assertLogContains(client, "CLIENT: sending 'prova'")
@@ -110,11 +110,11 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
         self.assertLogContains(daemon, "SERVER: received 'prova'")
         self.assertLogContains(daemon, "SERVER: received ''")
         self.assertLogContains(daemon, "SERVER: no more data to receive")
-        self.assertLogContains(daemon, "SERVER: sending 'prova'")
+        self.assertLogContains(daemon, "SERVER: sending 'avorp'")
         self.assertLogContains(daemon, "SERVER: sent")
         self.assertLogContains(daemon, "SERVER: closing client socket")
         self.assertLogContains(daemon, "SERVER: closed client socket")
-        self.assertLogContains(client, "CLIENT: received 'prova'")
+        self.assertLogContains(client, "CLIENT: received 'avorp'")
         self.assertLogContains(client, "CLIENT: received ''")
         self.assertLogContains(client, "CLIENT: no more data to receive")
         self.assertLogContains(client, "CLIENT: closing")
