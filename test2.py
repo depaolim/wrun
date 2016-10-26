@@ -42,12 +42,6 @@ class LogTestMixin(object):
         self.assertIn(expected, self._get_log(self._log_path(func)))
 
 
-def ProcessFunc_target(q, f, args):
-    # __main__ function needed because on Windows you can't use
-    # lambdas as multiprocessing target argument
-    q.put(f(*args))
-
-
 class ProcessFunc(object):
     def _kill(self):
         if sys.platform == 'win32':
@@ -55,9 +49,13 @@ class ProcessFunc(object):
         else:
             os.kill(self._process.pid, signal.SIGINT)
 
+    @staticmethod
+    def _target(q, f, args):
+        q.put(f(*args))
+
     def __init__(self, func, *args):
         self._queue = multiprocessing.Queue()
-        self._process = multiprocessing.Process(target=ProcessFunc_target, args=(self._queue, func, args))
+        self._process = multiprocessing.Process(target=self._target, args=(self._queue, func, args))
         self._process.start()
         time.sleep(0.5)
 
@@ -146,13 +144,13 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(json.loads(result), expected)
 
 
-def target_executor(command):
-    return executor(EXECUTABLE_PATH, command)
-
-
 class TestAcceptance(TestCommunication):
+    @staticmethod
+    def target_executor(command):
+        return executor(EXECUTABLE_PATH, command)
+
     def setUp(self):
-        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, target_executor)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.target_executor)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
