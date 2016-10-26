@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import print_function
-
 import json
 import logging
 import multiprocessing
@@ -45,6 +42,12 @@ class LogTestMixin(object):
         self.assertIn(expected, self._get_log(self._log_path(func)))
 
 
+def ProcessFunc_target(q, f, args):
+    # __main__ function needed because on Windows you can't use
+    # lambdas as multiprocessing target argument
+    q.put(f(*args))
+
+
 class ProcessFunc(object):
     def _kill(self):
         if sys.platform == 'win32':
@@ -52,9 +55,9 @@ class ProcessFunc(object):
         else:
             os.kill(self._process.pid, signal.SIGINT)
 
-    def __init__(self, func):
+    def __init__(self, func, *args):
         self._queue = multiprocessing.Queue()
-        self._process = multiprocessing.Process(target=lambda: self._queue.put(func()))
+        self._process = multiprocessing.Process(target=ProcessFunc_target, args=(self._queue, func, args))
         self._process.start()
         time.sleep(0.5)
 
@@ -71,12 +74,14 @@ class ProcessFunc(object):
         return self._queue.get()
 
 
-class TestClientServer(LogTestMixin, unittest.TestCase):
+class TestCommunication(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
     def _run_process_func(self, func, *args):
-        return ProcessFunc(lambda: self.logged_func(func, *args))
+        return ProcessFunc(self.logged_func, func, *args)
 
+
+class TestClientServer(TestCommunication):
     @staticmethod
     def revert(request):
         return request[::-1]
@@ -141,16 +146,13 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(json.loads(result), expected)
 
 
-class TestAcceptance(LogTestMixin, unittest.TestCase):
-    SERVER_ADDRESS = ('localhost', 3333)
+def target_executor(command):
+    return executor(EXECUTABLE_PATH, command)
 
-    def _run_process_func(self, func, *args):
-        return ProcessFunc(lambda: self.logged_func(func, *args))
 
+class TestAcceptance(TestCommunication):
     def setUp(self):
-        self.s = self._run_process_func(
-            daemon, self.SERVER_ADDRESS,
-            lambda exe_name, *args: executor(EXECUTABLE_PATH, exe_name, *args))
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, target_executor)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
