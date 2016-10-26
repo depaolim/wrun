@@ -234,7 +234,7 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self.ini_file = os.path.join(CWD, "test.ini")
         write_config(
             self.ini_file, LOG_PATH=log_path,
-            EXECUTABLE_PATH=EXECUTABLE_PATH, PORT=self.PORT)
+            EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
         self._call(sys.executable, "win_service2.py", self.SERVICE_NAME, self.ini_file)
 
     def tearDown(self):
@@ -244,6 +244,10 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
 
     def test_start(self):
         self._call("sc", "start", self.SERVICE_NAME)
+        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.__init__ BEGIN")
+        self.assertLogContains(
+            "win_service2", "INFO:win_service2:param EXECUTABLE_PATH '{}'".format(EXECUTABLE_PATH))
+        self.assertLogContains("win_service2", "INFO:win_service2:param HOST 'localhost'")
         self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcDoRun BEGIN")
 
     def test_stop(self):
