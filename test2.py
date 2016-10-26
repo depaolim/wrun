@@ -21,29 +21,37 @@ EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
 
 
 class LogTestMixin(object):
+    CWD = CWD
+
     @staticmethod
     def _get_log(path):
         with open(path) as f:
             return f.read()
 
-    @staticmethod
-    def _log_path(action):
+    @classmethod
+    def _log_path(cls, action):
         if not isinstance(action, str):
             action = action.__name__
-        return "test_" + action + ".log"
+        return os.path.join(cls.CWD, "test_" + action + ".log")
 
     @staticmethod
-    def init_log_file(path):
+    def _init_log_file(path):
         logging.basicConfig(filename=path, level=logging.DEBUG, filemode='a')
         logging.FileHandler(path, mode='w').close()  # log cleanup
 
     @classmethod
     def logged_func(cls, func, *args):
-        cls.init_log_file(cls._log_path(func))
+        cls._init_log_file(cls._log_path(func))
         return func(*args)
 
+    def initLog(self, action):
+        path = self._log_path(action)
+        self._init_log_file(path)
+        return path
+
     def assertLogContains(self, action, expected):
-        self.assertIn(expected, self._get_log(self._log_path(action)))
+        path = self._log_path(action)
+        self.assertIn(expected, self._get_log(path))
 
 
 class ProcessFunc(object):
@@ -219,12 +227,11 @@ class WinServiceLogTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
     PORT = '3333'
 
     def setUp(self):
-        log_path = os.path.join(CWD, "test_win_service2.log")
+        log_path = self.initLog("win_service2")
         self.ini_file = os.path.join(CWD, "test.ini")
         write_config(
             self.ini_file, LOG_PATH=log_path,
             EXECUTABLE_PATH=EXECUTABLE_PATH, PORT=self.PORT)
-        self.init_log_file(log_path)
         self._call(sys.executable, "win_service2.py", self.SERVICE_NAME, self.ini_file)
 
     def tearDown(self):
