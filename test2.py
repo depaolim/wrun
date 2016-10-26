@@ -1,8 +1,10 @@
+import configparser
 import json
 import logging
 import multiprocessing
 import os
 import signal
+import subprocess
 import sys
 import time
 import unittest
@@ -25,8 +27,10 @@ class LogTestMixin(object):
             return f.read()
 
     @staticmethod
-    def _log_path(func):
-        return "transport_" + func.__name__ + ".log"
+    def _log_path(action):
+        if not isinstance(action, str):
+            action = action.__name__
+        return "test_" + action + ".log"
 
     @staticmethod
     def init_log_file(path):
@@ -38,8 +42,8 @@ class LogTestMixin(object):
         cls.init_log_file(cls._log_path(func))
         return func(*args)
 
-    def assertLogContains(self, func, expected):
-        self.assertIn(expected, self._get_log(self._log_path(func)))
+    def assertLogContains(self, action, expected):
+        self.assertIn(expected, self._get_log(self._log_path(action)))
 
 
 class ProcessFunc(object):
@@ -168,6 +172,75 @@ class TestAcceptance(TestCommunication):
         expected = {"output": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
         result_dict = json.loads(c.result)
         self.assertEqual(result_dict, expected)
+
+
+def write_config(filepath, **kwargs):
+    config = configparser.ConfigParser()
+    for k, v in kwargs.items():
+        config.set('DEFAULT', k, v)
+    with open(filepath, "w") as f:
+        config.write(f)
+
+
+class TestConfigParser(unittest.TestCase):
+    def setUp(self):
+        self.ini_file = os.path.join(CWD, "test.ini")
+        write_config(self.ini_file, OPTION1="OPT1_VALUE", OPTION2="OPT2_VALUE")
+        self.config = configparser.ConfigParser()
+        self.config.read(self.ini_file)
+
+    def tearDown(self):
+        os.remove(self.ini_file)
+
+    def test_specified_option(self):
+        self.assertEqual(self.config.get('DEFAULT', 'OPTION1'), 'OPT1_VALUE')
+
+    def test_unspecified_option(self):
+        self.assertRaises(configparser.NoOptionError, self.config.get, 'DEFAULT', 'OTHER_OPTION')
+
+    def test_unspecified_option_with_default(self):
+        self.assertEqual(self.config.get('DEFAULT', 'OTHER_OPTION', fallback='other_default'), 'other_default')
+
+
+class CommandTestMixin(object):
+    def _call(self, *args, **kwargs):
+        ignore_errors = kwargs.pop("ignore_errors", False)
+        try:
+            subprocess.check_call(args)
+            time.sleep(0.5)
+        except subprocess.CalledProcessError:
+            if not ignore_errors:
+                raise
+
+
+@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
+class WinServiceLogTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
+    SERVICE_NAME = 'TestWRUN'
+    PORT = '3333'
+
+    def setUp(self):
+        log_path = os.path.join(CWD, "test_win_service2.log")
+        self.ini_file = os.path.join(CWD, "test.ini")
+        write_config(
+            self.ini_file, LOG_PATH=log_path,
+            EXECUTABLE_PATH=EXECUTABLE_PATH, PORT=self.PORT)
+        self.init_log_file(log_path)
+        self._call(sys.executable, "win_service2.py", self.SERVICE_NAME, self.ini_file)
+
+    def tearDown(self):
+        self._call("sc", "stop", self.SERVICE_NAME, ignore_errors=True)
+        self._call("sc", "delete", self.SERVICE_NAME, ignore_errors=True)
+        os.remove(self.ini_file)
+
+    def test_start(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcDoRun BEGIN")
+
+    def test_stop(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self._call("sc", "stop", self.SERVICE_NAME)
+        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop BEGIN")
+        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop END")
 
 
 if __name__ == '__main__':
