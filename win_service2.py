@@ -6,6 +6,8 @@ import time
 import win32service
 import win32serviceutil
 
+from wrun2 import daemon, executor
+
 log = logging.getLogger(__name__)
 
 
@@ -33,25 +35,23 @@ class WRUNService(win32serviceutil.ServiceFramework):
         log.info("WRUNService.__init__ BEGIN")
         log.info("WRUNService.__init__ ini_file '%s'", ini_file)
         log.info("WRUNService.__init__ LOG_PATH '%s'", log_path)
-        #self.executable_path = config.get('DEFAULT', 'EXECUTABLE_PATH')
-        #self.port = config.get('DEFAULT', 'PORT')
-        #self.hmackey = config.get('DEFAULT', 'HMACKEY', '')
+        self.executable_path = config.get('DEFAULT', 'EXECUTABLE_PATH')
+        self.port = int(config.get('DEFAULT', 'PORT'))
         win32serviceutil.ServiceFramework.__init__(self, args)
         log.info("WRUNService.__init__ END")
 
     def SvcDoRun(self):
         log.info("WRUNService.SvcDoRun BEGIN")
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-        time.sleep(0.1)
+        # put any start-up here
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-        while True:
-            time.sleep(1)
+        daemon(("localhost", self.port), lambda command: executor(self.executable_path, command))
         log.info("WRUNService.SvcDoRun END")
 
     def SvcStop(self):
         log.info("WRUNService.SvcStop BEGIN")
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        time.sleep(0.1)
+        # put any clean-up here
         self.ReportServiceStatus(win32service.SERVICE_STOPPED)
         log.info("WRUNService.SvcStop END")
 

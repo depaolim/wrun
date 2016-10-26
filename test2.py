@@ -185,7 +185,7 @@ class TestAcceptance(TestCommunication):
 def write_config(filepath, **kwargs):
     config = configparser.ConfigParser()
     for k, v in kwargs.items():
-        config.set('DEFAULT', k, v)
+        config.set('DEFAULT', k, str(v))
     with open(filepath, "w") as f:
         config.write(f)
 
@@ -222,9 +222,12 @@ class CommandTestMixin(object):
 
 
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
-class WinServiceLogTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
+class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
     SERVICE_NAME = 'TestWRUN'
-    PORT = '3333'
+    PORT = 3333
+
+    def assertJsonEqual(self, result, **kwargs):
+        self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
         log_path = self.initLog("win_service2")
@@ -249,6 +252,18 @@ class WinServiceLogTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop BEGIN")
         self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop END")
 
+    def test_client_connection_error(self):
+        self.assertRaises(ConnectionRefusedError, client, ("localhost", self.PORT), "NO_MATTER")
+
+    def test_client_request(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["P1"]]))
+        self.assertJsonEqual(result, output=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
+
+    def test_client_request_error(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
+        self.assertJsonEqual(result, output=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
 
 if __name__ == '__main__':
     unittest.main()
