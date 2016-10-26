@@ -9,6 +9,7 @@ import socket
 import subprocess
 
 BUFFER_SIZE = 255
+ENCODING = "utf-8"
 
 log = logging.getLogger(__name__)
 
@@ -27,18 +28,18 @@ def daemon(server_address, execute, condition=lambda: True):
             log.info("SERVER: waiting for a connection...")
             sc, ad = ss.accept()
             log.info("SERVER: connection from %s", ad)
-            request = ""
+            request = bytes()
             while True:
                 log.info("SERVER: receiving...")
                 data = sc.recv(BUFFER_SIZE)
-                log.info("SERVER: received '%s'", data)
+                log.info("SERVER: received %s", data)
                 if not data:
                     log.info("SERVER: no more data to receive")
                     break
                 request += data
-            response = execute(request)
+            response = execute(request.decode(ENCODING))
             log.info("SERVER: sending '%s' ...", response)
-            sc.sendall(response)
+            sc.sendall(bytes(response, 'utf-8'))
             log.info("SERVER: sent")
             log.info("SERVER: closing client socket...")
             sc.close()
@@ -55,14 +56,14 @@ def client(server_address, request):
     ss.connect(server_address)
     log.info("CLIENT: connected")
     log.info("CLIENT: sending '%s' ...", request)
-    ss.sendall(request)
+    ss.sendall(bytes(request, 'utf-8'))
     ss.shutdown(socket.SHUT_WR)
     log.info("CLIENT: sent")
-    response = ""
+    response = bytes()
     while True:
         log.info("CLIENT: receiving...")
         data = ss.recv(BUFFER_SIZE)
-        log.info("CLIENT: received '%s'", data)
+        log.info("CLIENT: received %s", data)
         if not data:
             log.info("CLIENT: no more data to receive")
             break
@@ -70,7 +71,7 @@ def client(server_address, request):
     log.info("CLIENT: closing...")
     ss.close()
     log.info("CLIENT: closed")
-    return response
+    return response.decode(ENCODING)
 
 
 def executor(exe_path, command):
@@ -84,4 +85,4 @@ def executor(exe_path, command):
     except subprocess.CalledProcessError as cpe:
         output = cpe.output
         returncode = cpe.returncode
-    return json.dumps({"output": output, "returncode": returncode})
+    return json.dumps({"output": output.decode(ENCODING), "returncode": returncode})

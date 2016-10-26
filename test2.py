@@ -29,7 +29,7 @@ class LogTestMixin(object):
 
     @staticmethod
     def _log_path(func):
-        return "transport_" + func.func_name + ".log"
+        return "transport_" + func.__name__ + ".log"
 
     @staticmethod
     def init_log_file(path):
@@ -107,15 +107,15 @@ class TestClientServer(LogTestMixin, unittest.TestCase):
         self.assertLogContains(client, "CLIENT: receiving...")
         self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
         self.assertLogContains(daemon, "SERVER: receiving...")
-        self.assertLogContains(daemon, "SERVER: received 'prova'")
-        self.assertLogContains(daemon, "SERVER: received ''")
+        self.assertLogContains(daemon, "SERVER: received b'prova'")
+        self.assertLogContains(daemon, "SERVER: received b''")
         self.assertLogContains(daemon, "SERVER: no more data to receive")
         self.assertLogContains(daemon, "SERVER: sending 'avorp'")
         self.assertLogContains(daemon, "SERVER: sent")
         self.assertLogContains(daemon, "SERVER: closing client socket")
         self.assertLogContains(daemon, "SERVER: closed client socket")
-        self.assertLogContains(client, "CLIENT: received 'avorp'")
-        self.assertLogContains(client, "CLIENT: received ''")
+        self.assertLogContains(client, "CLIENT: received b'avorp'")
+        self.assertLogContains(client, "CLIENT: received b''")
         self.assertLogContains(client, "CLIENT: no more data to receive")
         self.assertLogContains(client, "CLIENT: closing")
         self.assertLogContains(client, "CLIENT: closed")
