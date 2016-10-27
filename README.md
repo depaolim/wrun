@@ -3,22 +3,15 @@ Run Remote Windows Executables
 
 ## Installation
 
-Install the last python 2.7 package (ex. Python 2.7.12)
-
-[Only for the Windows server Service] Install the last PyWin32 package for python 2.7 (ex. PyWin32 220)
-
 Clone the github repo (at the moment there is no proper setup)
 
     git clone https://github.com/depaolim/wrun
-    
-Install other dependencies:
 
-    cd wrun
-    pip install -r requirements.txt
+[Only for the daemon run as "Windows Service"] Install the last PyWin32 package
 
 ## Usage
 
-You can create a Windows Service and use it via wrun.Client
+You can create a Windows Service and use it via wrun.Proxy
 
 #### Service Configuration
 
@@ -26,14 +19,16 @@ Create a "ini" configuration file. Example wrun_service.ini:
 
     [DEFAULT]
     EXECUTABLE_PATH = C:\remote_activation
+    LOG_PATH = C:\remote_activation\wrun.log
     PORT = 3333
     
-Mandatory settings are:
- * EXECUTABLE_PATH: absolute path of the directory where executables are stored
+Mandatory settings:
+ * EXECUTABLE_PATH: absolute path of the executables directory
+ * LOG_PATH: absolute path of the daemon log file
  * PORT: daemon listening port
  
-Optional settings are:
- * HMACKEY: if specified activates a secure client-server communication. Must be the same on the two sides
+Optional settings:
+ * HOST: host name or IP address (default: localhost)
 
 #### Service Management
 
@@ -52,16 +47,26 @@ Sample code:
 
     import wrun
     
-    client = wrun.Client(REMOTE_HOST_NAME, "3333")
+    client = wrun.Proxy("localhost", "3333")
     result = client.run("sample.exe", "first-param", "second-param")
     print(result)
+    # {"output": "OUTPUT", "returncode": 0}
+    
+ General form:
  
+    import wrun
+    
+    client = wrun.Proxy(<server>, <port>)
+    result = client.run(<executable_name>, <params>*)
+
  Some constraints:
  
- * sample.exe must exit with exitcode 0. Otherwise an exception is raised
- * result is the collected standard output of sample.exe
+ * server, port: connection parameters for daemon
+ * executable_name: name of exe or script available in the EXECUTABLE_PATH of the daemon
+ * params: various command line arguments passed to executable
+ * result: dictionary with collected output and returncode
  
-The client does not need PyWin32, so you can run it even on a linux box
+The client does not need PyWin32
 
 ## Tests
  
@@ -74,10 +79,8 @@ Some tests will be skipped if PyWin32 is not installed
 
 ## TODO
 
-* setup.py (pyPI?)
 * Travis-CI
-* py2exe
-
-## TODO (for wrun2 with sockets)
-
 * hmac
+* configurable logging (rotation, log-level, etc.)
+* setup.py (pyPI?)
+* py2exe
