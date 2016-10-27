@@ -58,6 +58,10 @@ class LogTestMixin(object):
         self.assertRegexpMatches(self._get_log(path), expected)
 
 
+def ProcessFunc_target(q, f, args):
+    q.put(f(*args))
+
+
 class ProcessFunc(object):
     def _kill(self):
         if sys.platform == 'win32':
@@ -65,13 +69,9 @@ class ProcessFunc(object):
         else:
             os.kill(self._process.pid, signal.SIGINT)
 
-    @staticmethod
-    def _target(q, f, args):
-        q.put(f(*args))
-
     def __init__(self, func, *args):
         self._queue = multiprocessing.Queue()
-        self._process = multiprocessing.Process(target=self._target, args=(self._queue, func, args))
+        self._process = multiprocessing.Process(target=ProcessFunc_target, args=(self._queue, func, args))
         self._process.start()
         time.sleep(0.5)
 
@@ -95,13 +95,13 @@ class TestCommunication(LogTestMixin, unittest.TestCase):
         return ProcessFunc(self.logged_func, func, *args)
 
 
-class TestClientServer(TestCommunication):
-    @staticmethod
-    def revert(request):
-        return request[::-1]
+def TestClientServer_revert(request):
+    return request[::-1]
 
+
+class TestClientServer(TestCommunication):
     def setUp(self):
-        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.revert)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, TestClientServer_revert)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
@@ -176,13 +176,13 @@ class TestProxy(unittest.TestCase):
         self.assertEqual(self._mock_client_calls, [('SERVER_ADDRESS', '["SAMPLE_EXE", []]')])
 
 
-class TestAcceptance(TestCommunication):
-    @staticmethod
-    def target_executor(command):
-        return executor(EXECUTABLE_PATH, command)
+def TestAcceptance_target_executor(command):
+    return executor(EXECUTABLE_PATH, command)
 
+
+class TestAcceptance(TestCommunication):
     def setUp(self):
-        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.target_executor)
+        self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, TestAcceptance_target_executor)
         self.p = Proxy(self.SERVER_ADDRESS)
 
     def tearDown(self):
@@ -280,7 +280,7 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self.assertLogContains("win_service", "INFO:win_service:WRUNService.SvcStop END")
 
     def test_client_connection_error(self):
-        self.assertRaises(ConnectionRefusedError, client, ("localhost", self.PORT), "NO_MATTER")
+        self.assertRaises(Exception, client, ("localhost", self.PORT), "NO_MATTER")
 
     def test_client_request(self):
         self._call("sc", "start", self.SERVICE_NAME)
