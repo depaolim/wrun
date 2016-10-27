@@ -35,7 +35,7 @@ def daemon(server_address, execute, condition=lambda: True):
                 request += data
             response = execute(request.decode(ENCODING))
             log.info("SERVER: sending '%s' ...", response)
-            sc.sendall(bytes(response, 'utf-8'))
+            sc.sendall(response.encode(ENCODING))
             log.info("SERVER: sent")
             log.info("SERVER: closing client socket...")
             sc.close()
@@ -52,7 +52,7 @@ def client(server_address, request):
     ss.connect(server_address)
     log.info("CLIENT: connected")
     log.info("CLIENT: sending '%s' ...", request)
-    ss.sendall(bytes(request, 'utf-8'))
+    ss.sendall(request.encode(ENCODING))
     ss.shutdown(socket.SHUT_WR)
     log.info("CLIENT: sent")
     response = bytes()
