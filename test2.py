@@ -53,6 +53,10 @@ class LogTestMixin(object):
         path = self._log_path(action)
         self.assertIn(expected, self._get_log(path))
 
+    def assertLogMatch(self, action, expected):
+        path = self._log_path(action)
+        self.assertRegexpMatches(self._get_log(path), expected)
+
 
 class ProcessFunc(object):
     def _kill(self):
@@ -122,15 +126,15 @@ class TestClientServer(TestCommunication):
         self.assertLogContains(client, "CLIENT: receiving...")
         self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
         self.assertLogContains(daemon, "SERVER: receiving...")
-        self.assertLogContains(daemon, "SERVER: received b'prova'")
-        self.assertLogContains(daemon, "SERVER: received b''")
+        self.assertLogMatch(daemon, "SERVER: received (b')?prova'?")
+        self.assertLogMatch(daemon, "SERVER: received (b'')?")
         self.assertLogContains(daemon, "SERVER: no more data to receive")
         self.assertLogContains(daemon, "SERVER: sending 'avorp'")
         self.assertLogContains(daemon, "SERVER: sent")
         self.assertLogContains(daemon, "SERVER: closing client socket")
         self.assertLogContains(daemon, "SERVER: closed client socket")
-        self.assertLogContains(client, "CLIENT: received b'avorp'")
-        self.assertLogContains(client, "CLIENT: received b''")
+        self.assertLogMatch(client, "CLIENT: received (b')?avorp'?")
+        self.assertLogMatch(client, "CLIENT: received (b'')?")
         self.assertLogContains(client, "CLIENT: no more data to receive")
         self.assertLogContains(client, "CLIENT: closing")
         self.assertLogContains(client, "CLIENT: closed")
