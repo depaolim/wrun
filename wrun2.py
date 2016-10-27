@@ -21,55 +21,55 @@ def daemon(server_address, execute, condition=lambda: True):
     ss.listen(1)
     try:
         while condition():
-            log.info("SERVER: waiting for a connection...")
+            log.debug("SERVER: waiting for a connection...")
             sc, ad = ss.accept()
-            log.info("SERVER: connection from %s", ad)
+            log.debug("SERVER: connection from %s", ad)
             request = bytes()
             while True:
-                log.info("SERVER: receiving...")
+                log.debug("SERVER: receiving...")
                 data = sc.recv(BUFFER_SIZE)
-                log.info("SERVER: received %s", data)
+                log.debug("SERVER: received %s", data)
                 if not data:
-                    log.info("SERVER: no more data to receive")
+                    log.debug("SERVER: no more data to receive")
                     break
                 request += data
             response = execute(request.decode(ENCODING))
-            log.info("SERVER: sending '%s' ...", response)
+            log.debug("SERVER: sending '%s' ...", response)
             sc.sendall(response.encode(ENCODING))
-            log.info("SERVER: sent")
-            log.info("SERVER: closing client socket...")
+            log.debug("SERVER: sent")
+            log.debug("SERVER: closing client socket...")
             sc.close()
-            log.info("SERVER: closed client socket")
+            log.debug("SERVER: closed client socket")
     finally:
-        log.info("SERVER: closing server socket...")
+        log.debug("SERVER: closing server socket...")
         ss.close()
-        log.info("SERVER: closed server socket")
+        log.debug("SERVER: closed server socket")
 
 
 def client(server_address, request):
     ss = Socket()
     try:
-        log.info("CLIENT: connecting '%s' ...", server_address)
+        log.debug("CLIENT: connecting '%s' ...", server_address)
         ss.connect(server_address)
-        log.info("CLIENT: connected")
-        log.info("CLIENT: sending '%s' ...", request)
+        log.debug("CLIENT: connected")
+        log.debug("CLIENT: sending '%s' ...", request)
         ss.sendall(request.encode(ENCODING))
         ss.shutdown(socket.SHUT_WR)
-        log.info("CLIENT: sent")
+        log.debug("CLIENT: sent")
         response = bytes()
         while True:
-            log.info("CLIENT: receiving...")
+            log.debug("CLIENT: receiving...")
             data = ss.recv(BUFFER_SIZE)
-            log.info("CLIENT: received %s", data)
+            log.debug("CLIENT: received %s", data)
             if not data:
-                log.info("CLIENT: no more data to receive")
+                log.debug("CLIENT: no more data to receive")
                 break
             response += data
         return response.decode(ENCODING)
     finally:
-        log.info("CLIENT: closing...")
+        log.debug("CLIENT: closing...")
         ss.close()
-        log.info("CLIENT: closed")
+        log.debug("CLIENT: closed")
 
 def executor(exe_path, command):
     exe_name, args = json.loads(command)

@@ -47,7 +47,7 @@ class WRUNService(win32serviceutil.ServiceFramework):
     def SvcDoRun(self):
         log.info("WRUNService.SvcDoRun BEGIN")
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
-        # put any start-up here
+        # put any start-up code here
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         daemon((self.host, self.port), lambda command: executor(self.executable_path, command))
         log.info("WRUNService.SvcDoRun END")
@@ -55,7 +55,7 @@ class WRUNService(win32serviceutil.ServiceFramework):
     def SvcStop(self):
         log.info("WRUNService.SvcStop BEGIN")
         self.ReportServiceStatus(win32service.SERVICE_STOP_PENDING)
-        # put any clean-up here
+        # put any clean-up code here
         self.ReportServiceStatus(win32service.SERVICE_STOPPED)
         log.info("WRUNService.SvcStop END")
 
