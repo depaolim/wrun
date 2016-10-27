@@ -9,7 +9,7 @@ import sys
 import time
 import unittest
 
-from wrun2 import Proxy, client, daemon, executor
+from wrun import Proxy, client, daemon, executor
 
 if sys.platform == 'win32':
     EXECUTABLE_NAME = "sample.bat"

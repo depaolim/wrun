@@ -1,12 +1,11 @@
 from configparser import ConfigParser
 import logging
 import sys
-import time
 
 import win32service
 import win32serviceutil
 
-from wrun2 import daemon, executor
+from wrun import daemon, executor
 
 log = logging.getLogger(__name__)
 
