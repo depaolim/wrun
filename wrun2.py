@@ -48,27 +48,28 @@ def daemon(server_address, execute, condition=lambda: True):
 
 def client(server_address, request):
     ss = Socket()
-    log.info("CLIENT: connecting '%s' ...", server_address)
-    ss.connect(server_address)
-    log.info("CLIENT: connected")
-    log.info("CLIENT: sending '%s' ...", request)
-    ss.sendall(request.encode(ENCODING))
-    ss.shutdown(socket.SHUT_WR)
-    log.info("CLIENT: sent")
-    response = bytes()
-    while True:
-        log.info("CLIENT: receiving...")
-        data = ss.recv(BUFFER_SIZE)
-        log.info("CLIENT: received %s", data)
-        if not data:
-            log.info("CLIENT: no more data to receive")
-            break
-        response += data
-    log.info("CLIENT: closing...")
-    ss.close()
-    log.info("CLIENT: closed")
-    return response.decode(ENCODING)
-
+    try:
+        log.info("CLIENT: connecting '%s' ...", server_address)
+        ss.connect(server_address)
+        log.info("CLIENT: connected")
+        log.info("CLIENT: sending '%s' ...", request)
+        ss.sendall(request.encode(ENCODING))
+        ss.shutdown(socket.SHUT_WR)
+        log.info("CLIENT: sent")
+        response = bytes()
+        while True:
+            log.info("CLIENT: receiving...")
+            data = ss.recv(BUFFER_SIZE)
+            log.info("CLIENT: received %s", data)
+            if not data:
+                log.info("CLIENT: no more data to receive")
+                break
+            response += data
+        return response.decode(ENCODING)
+    finally:
+        log.info("CLIENT: closing...")
+        ss.close()
+        log.info("CLIENT: closed")
 
 def executor(exe_path, command):
     exe_name, args = json.loads(command)
