@@ -253,12 +253,12 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        log_path = self.initLog("win_service2")
+        log_path = self.initLog("win_service")
         self.ini_file = os.path.join(CWD, "test.ini")
         write_config(
             self.ini_file, LOG_PATH=log_path,
             EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
-        self._call(sys.executable, "win_service2.py", self.SERVICE_NAME, self.ini_file)
+        self._call(sys.executable, "win_service.py", self.SERVICE_NAME, self.ini_file)
 
     def tearDown(self):
         self._call("sc", "stop", self.SERVICE_NAME, ignore_errors=True)
@@ -267,17 +267,17 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
 
     def test_start(self):
         self._call("sc", "start", self.SERVICE_NAME)
-        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.__init__ BEGIN")
+        self.assertLogContains("win_service", "INFO:win_service:WRUNService.__init__ BEGIN")
         self.assertLogContains(
-            "win_service2", "INFO:win_service2:param EXECUTABLE_PATH '{}'".format(EXECUTABLE_PATH))
-        self.assertLogContains("win_service2", "INFO:win_service2:param HOST 'localhost'")
-        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcDoRun BEGIN")
+            "win_service", "INFO:win_service:param EXECUTABLE_PATH '{}'".format(EXECUTABLE_PATH))
+        self.assertLogContains("win_service", "INFO:win_service:param HOST 'localhost'")
+        self.assertLogContains("win_service", "INFO:win_service:WRUNService.SvcDoRun BEGIN")
 
     def test_stop(self):
         self._call("sc", "start", self.SERVICE_NAME)
         self._call("sc", "stop", self.SERVICE_NAME)
-        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop BEGIN")
-        self.assertLogContains("win_service2", "INFO:win_service2:WRUNService.SvcStop END")
+        self.assertLogContains("win_service", "INFO:win_service:WRUNService.SvcStop BEGIN")
+        self.assertLogContains("win_service", "INFO:win_service:WRUNService.SvcStop END")
 
     def test_client_connection_error(self):
         self.assertRaises(ConnectionRefusedError, client, ("localhost", self.PORT), "NO_MATTER")
@@ -301,8 +301,8 @@ class DoubleWinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        log_path_1 = self.initLog("win_service2_1")
-        log_path_2 = self.initLog("win_service2_2")
+        log_path_1 = self.initLog("win_service_1")
+        log_path_2 = self.initLog("win_service_2")
         self.ini_file_1 = os.path.join(CWD, "test_1.ini")
         write_config(
             self.ini_file_1, LOG_PATH=log_path_1,
@@ -311,8 +311,8 @@ class DoubleWinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         write_config(
             self.ini_file_2, LOG_PATH=log_path_2,
             EXECUTABLE_PATH=self.EXECUTABLE_PATH_2, HOST="localhost", PORT=3334)
-        self._call(sys.executable, "win_service2.py", "TestWRUN_1", self.ini_file_1)
-        self._call(sys.executable, "win_service2.py", "TestWRUN_2", self.ini_file_2)
+        self._call(sys.executable, "win_service.py", "TestWRUN_1", self.ini_file_1)
+        self._call(sys.executable, "win_service.py", "TestWRUN_2", self.ini_file_2)
 
     def tearDown(self):
         self._call("sc", "stop", "TestWRUN_1", ignore_errors=True)
