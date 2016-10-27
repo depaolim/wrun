@@ -144,19 +144,19 @@ class TestExecutor(unittest.TestCase):
     def test_run_P1(self):
         command = [EXECUTABLE_NAME, ["P1"]]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
-        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), "returncode": 0}
+        expected = {"stdout": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), "returncode": 0}
         self.assertEqual(json.loads(result), expected)
 
     def test_run_P2(self):
         command = [EXECUTABLE_NAME, ["P2"]]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
-        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P2", ""]), "returncode": 0}
+        expected = {"stdout": os.linesep.join([EXECUTABLE_PATH, "hello P2", ""]), "returncode": 0}
         self.assertEqual(json.loads(result), expected)
 
     def test_run_ERROR(self):
         command = [EXECUTABLE_NAME, ["ERROR"]]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
-        expected = {"output": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
+        expected = {"stdout": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
         self.assertEqual(json.loads(result), expected)
 
 
@@ -170,9 +170,9 @@ class TestProxy(unittest.TestCase):
 
     def test_run(self):
         p = Proxy("SERVER_ADDRESS", self._mock_client)
-        self._mock_client_return_value = {"output": "OUTPUT", "returncode": 0}
+        self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
         result = p.run("SAMPLE_EXE")
-        self.assertEqual(result, {"output": "OUTPUT", "returncode": 0})
+        self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
         self.assertEqual(self._mock_client_calls, [('SERVER_ADDRESS', '["SAMPLE_EXE", []]')])
 
 
@@ -193,7 +193,7 @@ class TestAcceptance(TestCommunication):
         c.join()
         self.assertEqual(
             c.result, {
-                "output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]),
+                "stdout": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]),
                 "returncode": 0})
 
     def test_client_request_error(self):
@@ -201,7 +201,7 @@ class TestAcceptance(TestCommunication):
         c.join()
         self.assertEqual(
             c.result, {
-                "output": os.linesep.join([EXECUTABLE_PATH, ""]),
+                "stdout": os.linesep.join([EXECUTABLE_PATH, ""]),
                 "returncode": 1})
 
 
@@ -285,12 +285,12 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
     def test_client_request(self):
         self._call("sc", "start", self.SERVICE_NAME)
         result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["P1"]]))
-        self.assertJsonEqual(result, output=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
+        self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
 
     def test_client_request_error(self):
         self._call("sc", "start", self.SERVICE_NAME)
         result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
-        self.assertJsonEqual(result, output=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
+        self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
 
 
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
@@ -326,9 +326,9 @@ class DoubleWinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self._call("sc", "start", "TestWRUN_1")
         self._call("sc", "start", "TestWRUN_2")
         result_1 = client(("localhost", 3333), json.dumps([EXECUTABLE_NAME, ["P1"]]))
-        self.assertJsonEqual(result_1, output=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
+        self.assertJsonEqual(result_1, stdout=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
         result_2 = client(("localhost", 3334), json.dumps([EXECUTABLE_NAME, ["P1"]]))
-        self.assertJsonEqual(result_2, output=os.linesep.join([self.EXECUTABLE_PATH_2, "mandi P1", ""]), returncode=0)
+        self.assertJsonEqual(result_2, stdout=os.linesep.join([self.EXECUTABLE_PATH_2, "mandi P1", ""]), returncode=0)
 
 
 if __name__ == '__main__':

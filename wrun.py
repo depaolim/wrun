@@ -78,12 +78,12 @@ def executor(exe_path, command):
     cmd = [os.path.join(exe_path, exe_name)]
     cmd.extend(args)
     try:
-        output = subprocess.check_output(cmd, cwd=exe_path)
+        out = subprocess.check_output(cmd, cwd=exe_path)
         returncode = 0
     except subprocess.CalledProcessError as cpe:
-        output = cpe.output
+        out = cpe.output
         returncode = cpe.returncode
-    return json.dumps({"output": output.decode(ENCODING), "returncode": returncode})
+    return json.dumps({"stdout": out.decode(ENCODING), "returncode": returncode})
 
 
 class Proxy:

@@ -50,7 +50,7 @@ Sample code:
     client = wrun.Proxy("localhost", "3333")
     result = client.run("sample.exe", "first-param", "second-param")
     print(result)
-    # {"output": "OUTPUT", "returncode": 0}
+    # {"stdout": "OUTPUT", "returncode": 0}
     
  General form:
  
@@ -64,7 +64,7 @@ Sample code:
  * server, port: connection parameters for daemon
  * executable_name: name of exe or script available in the EXECUTABLE_PATH of the daemon
  * params: various command line arguments passed to executable
- * result: dictionary with collected output and returncode
+ * result: dictionary with collected stdout and returncode
  
 The client does not need PyWin32
 
