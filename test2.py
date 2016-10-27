@@ -273,5 +273,44 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
         self.assertJsonEqual(result, output=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
 
+
+@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
+class DoubleWinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
+    EXECUTABLE_PATH_2 = os.path.join(CWD, "test_executables_2")
+
+    def assertJsonEqual(self, result, **kwargs):
+        self.assertEqual(json.loads(result), kwargs)
+
+    def setUp(self):
+        log_path_1 = self.initLog("win_service2_1")
+        log_path_2 = self.initLog("win_service2_2")
+        self.ini_file_1 = os.path.join(CWD, "test_1.ini")
+        write_config(
+            self.ini_file_1, LOG_PATH=log_path_1,
+            EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=3333)
+        self.ini_file_2 = os.path.join(CWD, "test_2.ini")
+        write_config(
+            self.ini_file_2, LOG_PATH=log_path_2,
+            EXECUTABLE_PATH=self.EXECUTABLE_PATH_2, HOST="localhost", PORT=3334)
+        self._call(sys.executable, "win_service2.py", "TestWRUN_1", self.ini_file_1)
+        self._call(sys.executable, "win_service2.py", "TestWRUN_2", self.ini_file_2)
+
+    def tearDown(self):
+        self._call("sc", "stop", "TestWRUN_1", ignore_errors=True)
+        self._call("sc", "delete", "TestWRUN_1", ignore_errors=True)
+        self._call("sc", "stop", "TestWRUN_2", ignore_errors=True)
+        self._call("sc", "delete", "TestWRUN_2", ignore_errors=True)
+        os.remove(self.ini_file_1)
+        os.remove(self.ini_file_2)
+
+    def test_double_client_request(self):
+        self._call("sc", "start", "TestWRUN_1")
+        self._call("sc", "start", "TestWRUN_2")
+        result_1 = client(("localhost", 3333), json.dumps([EXECUTABLE_NAME, ["P1"]]))
+        self.assertJsonEqual(result_1, output=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
+        result_2 = client(("localhost", 3334), json.dumps([EXECUTABLE_NAME, ["P1"]]))
+        self.assertJsonEqual(result_2, output=os.linesep.join([self.EXECUTABLE_PATH_2, "mandi P1", ""]), returncode=0)
+
+
 if __name__ == '__main__':
     unittest.main()
