@@ -71,6 +71,7 @@ def client(server_address, request):
         ss.close()
         log.debug("CLIENT: closed")
 
+
 def executor(exe_path, command):
     exe_name, args = json.loads(command)
     log.debug("executor %s %s", exe_name, " ".join(args))
@@ -83,3 +84,13 @@ def executor(exe_path, command):
         output = cpe.output
         returncode = cpe.returncode
     return json.dumps({"output": output.decode(ENCODING), "returncode": returncode})
+
+
+class Proxy:
+    def __init__(self, server_address, client=client):
+        self.server_address = server_address
+        self.client = client
+
+    def run(self, executable_name, *args):
+        result = self.client(self.server_address, json.dumps([executable_name, args]))
+        return json.loads(result)

@@ -80,6 +80,4 @@ Some tests will be skipped if PyWin32 is not installed
 
 ## TODO (for wrun2 with sockets)
 
-* manage error in subprocess
 * hmac
-* collect stdout/stderr/returncode

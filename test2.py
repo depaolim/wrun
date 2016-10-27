@@ -9,7 +9,7 @@ import sys
 import time
 import unittest
 
-from wrun2 import client, daemon, executor
+from wrun2 import Proxy, client, daemon, executor
 
 if sys.platform == 'win32':
     EXECUTABLE_NAME = "sample.bat"
@@ -160,6 +160,22 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(json.loads(result), expected)
 
 
+class TestProxy(unittest.TestCase):
+    def _mock_client(self, *args):
+        self._mock_client_calls.append(args)
+        return json.dumps(self._mock_client_return_value)
+
+    def setUp(self):
+        self._mock_client_calls = []
+
+    def test_run(self):
+        p = Proxy("SERVER_ADDRESS", self._mock_client)
+        self._mock_client_return_value = {"output": "OUTPUT", "returncode": 0}
+        result = p.run("SAMPLE_EXE")
+        self.assertEqual(result, {"output": "OUTPUT", "returncode": 0})
+        self.assertEqual(self._mock_client_calls, [('SERVER_ADDRESS', '["SAMPLE_EXE", []]')])
+
+
 class TestAcceptance(TestCommunication):
     @staticmethod
     def target_executor(command):
@@ -167,23 +183,26 @@ class TestAcceptance(TestCommunication):
 
     def setUp(self):
         self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, self.target_executor)
+        self.p = Proxy(self.SERVER_ADDRESS)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
 
     def test_client_request(self):
-        c = self._run_process_func(client, self.SERVER_ADDRESS, json.dumps([EXECUTABLE_NAME, ["P1"]]))
+        c = self._run_process_func(self.p.run, EXECUTABLE_NAME, "P1")
         c.join()
-        expected = {"output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), "returncode": 0}
-        result_dict = json.loads(c.result)
-        self.assertEqual(result_dict, expected)
+        self.assertEqual(
+            c.result, {
+                "output": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]),
+                "returncode": 0})
 
     def test_client_request_error(self):
-        c = self._run_process_func(client, self.SERVER_ADDRESS, json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
+        c = self._run_process_func(self.p.run, EXECUTABLE_NAME, "ERROR")
         c.join()
-        expected = {"output": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
-        result_dict = json.loads(c.result)
-        self.assertEqual(result_dict, expected)
+        self.assertEqual(
+            c.result, {
+                "output": os.linesep.join([EXECUTABLE_PATH, ""]),
+                "returncode": 1})
 
 
 def write_config(filepath, **kwargs):
