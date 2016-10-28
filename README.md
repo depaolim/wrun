@@ -49,7 +49,7 @@ Sample code:
 
     import wrun
     
-    client = wrun.Proxy("localhost", "3333")
+    client = wrun.Proxy("localhost", 3333)
     result = client.run("sample.exe", "first-param", "second-param")
     print(result)
     # {"stdout": "OUTPUT", "returncode": 0}
