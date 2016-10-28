@@ -7,9 +7,9 @@ Clone the github repo (at the moment there is no proper setup)
 
     git clone https://github.com/depaolim/wrun
 
-[Only for the daemon run as "Windows Service"] Install the last PyWin32 package
+[To use "Windows Service"] Install the last PyWin32 package
 
-[Only for python 2] pip install configparser
+[For python 2] pip install configparser
 
 ## Usage
 
