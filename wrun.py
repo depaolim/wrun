@@ -87,8 +87,8 @@ def executor(exe_path, command):
 
 
 class Proxy:
-    def __init__(self, server_address, client=client):
-        self.server_address = server_address
+    def __init__(self, host, port, client=client):
+        self.server_address = (host, port)
         self.client = client
 
     def run(self, executable_name, *args):

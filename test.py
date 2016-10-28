@@ -169,11 +169,11 @@ class TestProxy(unittest.TestCase):
         self._mock_client_calls = []
 
     def test_run(self):
-        p = Proxy("SERVER_ADDRESS", self._mock_client)
+        p = Proxy("HOST", "PORT", self._mock_client)
         self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
         result = p.run("SAMPLE_EXE")
         self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
-        self.assertEqual(self._mock_client_calls, [('SERVER_ADDRESS', '["SAMPLE_EXE", []]')])
+        self.assertEqual(self._mock_client_calls, [(('HOST', 'PORT'), '["SAMPLE_EXE", []]')])
 
 
 def TestAcceptance_target_executor(command):
@@ -183,7 +183,7 @@ def TestAcceptance_target_executor(command):
 class TestAcceptance(TestCommunication):
     def setUp(self):
         self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, TestAcceptance_target_executor)
-        self.p = Proxy(self.SERVER_ADDRESS)
+        self.p = Proxy(*self.SERVER_ADDRESS)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
