@@ -3,13 +3,14 @@ Run Remote Windows Executables
 
 ## Installation
 
-Clone the github repo (at the moment there is no proper setup)
+Install from pypi
 
-    git clone https://github.com/depaolim/wrun
+    pip install wrun
 
-[To use "Windows Service"] Install the last PyWin32 package
+To use "Windows Service" on Windows
 
-[For python 2] pip install configparser
+Install the last PyWin32 package
+https://sourceforge.net/projects/pywin32/files/pywin32/
 
 ## Usage
 
@@ -17,7 +18,8 @@ You can create a Windows Service and use it via wrun.Proxy
 
 #### Service Configuration
 
-Create a "ini" configuration file. Example wrun_service.ini:
+Create a "ini" configuration file.
+Example wrun_service.ini:
 
     [DEFAULT]
     EXECUTABLE_PATH = C:\remote_activation
@@ -34,11 +36,12 @@ Optional settings:
 
 #### Service Management
 
-Installation:
+Create the Windows Service:
 
-    cd wrun
-    python win_service.py <service-name> <full-path-to-ini-file>
-    
+    wrun_service.py <service-name> <absolute-path-to-ini-file>
+
+(wrun_service.py is a utility script installed alongside with wrun)
+
 Start/Stop/Delete the service:
 
     sc start|stop|delete <service-name>
@@ -73,7 +76,8 @@ The client does not need PyWin32
 ## Tests
  
 To run the test cases:
- 
+
+    git clone https://github.com/depaolim/wrun
     cd wrun
     python test.py
  
@@ -84,5 +88,3 @@ Some tests will be skipped if PyWin32 is not installed
 * Travis-CI
 * hmac
 * configurable logging (rotation, log-level, etc.)
-* setup.py (pyPI?)
-* py2exe
