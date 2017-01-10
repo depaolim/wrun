@@ -1,4 +1,3 @@
-import configparser
 import json
 import logging
 import multiprocessing
@@ -9,7 +8,7 @@ import sys
 import time
 import unittest
 
-from wrun import Proxy, client, daemon, executor
+from wrun import Config, Proxy, client, daemon, executor
 
 if sys.platform == 'win32':
     EXECUTABLE_NAME = "sample.bat"
@@ -205,32 +204,23 @@ class TestAcceptance(TestCommunication):
                 "returncode": 1})
 
 
-def write_config(filepath, **kwargs):
-    config = configparser.ConfigParser()
-    for k, v in kwargs.items():
-        config.set('DEFAULT', k, str(v))
-    with open(filepath, "w") as f:
-        config.write(f)
-
-
-class TestConfigParser(unittest.TestCase):
+class TestConfig(unittest.TestCase):
     def setUp(self):
-        self.ini_file = os.path.join(CWD, "test.ini")
-        write_config(self.ini_file, OPTION1="OPT1_VALUE", OPTION2="OPT2_VALUE")
-        self.config = configparser.ConfigParser()
-        self.config.read(self.ini_file)
+        self.config_file = os.path.join(CWD, "settings_test.py")
+        Config.store(self.config_file, OPTION1="OPT1_VALUE", OPTION2="OPT2_VALUE")
+        self.config = Config(self.config_file)
 
     def tearDown(self):
-        os.remove(self.ini_file)
+        os.remove(self.config_file)
 
     def test_specified_option(self):
-        self.assertEqual(self.config.get('DEFAULT', 'OPTION1'), 'OPT1_VALUE')
+        self.assertEqual(self.config.OPTION1, 'OPT1_VALUE')
 
     def test_unspecified_option(self):
-        self.assertRaises(configparser.NoOptionError, self.config.get, 'DEFAULT', 'OTHER_OPTION')
+        self.assertRaises(AttributeError, getattr, self.config, 'OTHER_OPTION')
 
     def test_unspecified_option_with_default(self):
-        self.assertEqual(self.config.get('DEFAULT', 'OTHER_OPTION', fallback='other_default'), 'other_default')
+        self.assertEqual(getattr(self.config, 'OTHER_OPTION', 'other_default'), 'other_default')
 
 
 class CommandTestMixin(object):
@@ -254,16 +244,16 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
 
     def setUp(self):
         log_path = self.initLog("win_service")
-        self.ini_file = os.path.join(CWD, "test.ini")
-        write_config(
-            self.ini_file, LOG_PATH=log_path,
+        self.settings_file = os.path.join(CWD, "settings_test.py")
+        Config.store(
+            self.settings_file, LOG_PATH=log_path,
             EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
-        self._call(sys.executable, "wrun_service.py", self.SERVICE_NAME, self.ini_file)
+        self._call(sys.executable, "wrun_service.py", self.SERVICE_NAME, self.settings_file)
 
     def tearDown(self):
         self._call("sc", "stop", self.SERVICE_NAME, ignore_errors=True)
         self._call("sc", "delete", self.SERVICE_NAME, ignore_errors=True)
-        os.remove(self.ini_file)
+        os.remove(self.settings_file)
 
     def test_start(self):
         self._call("sc", "start", self.SERVICE_NAME)
@@ -303,24 +293,24 @@ class DoubleWinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
     def setUp(self):
         log_path_1 = self.initLog("win_service_1")
         log_path_2 = self.initLog("win_service_2")
-        self.ini_file_1 = os.path.join(CWD, "test_1.ini")
-        write_config(
-            self.ini_file_1, LOG_PATH=log_path_1,
+        self.settings_file_1 = os.path.join(CWD, "settings_test_1.py")
+        Config.store(
+            self.settings_file_1, LOG_PATH=log_path_1,
             EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=3333)
-        self.ini_file_2 = os.path.join(CWD, "test_2.ini")
-        write_config(
-            self.ini_file_2, LOG_PATH=log_path_2,
+        self.settings_file_2 = os.path.join(CWD, "settings_test_2.py")
+        Config.store(
+            self.settings_file_2, LOG_PATH=log_path_2,
             EXECUTABLE_PATH=self.EXECUTABLE_PATH_2, HOST="localhost", PORT=3334)
-        self._call(sys.executable, "wrun_service.py", "TestWRUN_1", self.ini_file_1)
-        self._call(sys.executable, "wrun_service.py", "TestWRUN_2", self.ini_file_2)
+        self._call(sys.executable, "wrun_service.py", "TestWRUN_1", self.settings_file_1)
+        self._call(sys.executable, "wrun_service.py", "TestWRUN_2", self.settings_file_2)
 
     def tearDown(self):
         self._call("sc", "stop", "TestWRUN_1", ignore_errors=True)
         self._call("sc", "delete", "TestWRUN_1", ignore_errors=True)
         self._call("sc", "stop", "TestWRUN_2", ignore_errors=True)
         self._call("sc", "delete", "TestWRUN_2", ignore_errors=True)
-        os.remove(self.ini_file_1)
-        os.remove(self.ini_file_2)
+        os.remove(self.settings_file_1)
+        os.remove(self.settings_file_2)
 
     def test_double_client_request(self):
         self._call("sc", "start", "TestWRUN_1")

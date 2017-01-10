@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import runpy
 import socket
 import subprocess
 
@@ -8,6 +9,21 @@ BUFFER_SIZE = 255
 ENCODING = "utf-8"
 
 log = logging.getLogger(__name__)
+
+
+class Config:
+    def __init__(self, filepath):
+        attrs = runpy.run_path(filepath)
+        for setting, setting_value in attrs.items():
+            if setting.isupper():
+                setattr(self, setting, setting_value)
+
+    @staticmethod
+    def store(filepath, **kwargs):
+        with open(filepath, "w") as f:
+            for k, v in kwargs.items():
+                f.write('{} = {}\n'.format(k, repr(v)))
+
 
 
 class Socket(socket.socket):

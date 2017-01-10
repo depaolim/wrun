@@ -7,7 +7,7 @@ Install from pypi
 
     pip install wrun
 
-To use "Windows Service" on Windows
+### To use "Windows Service" on Windows
 
 Install the last PyWin32 package
 https://sourceforge.net/projects/pywin32/files/pywin32/
@@ -18,12 +18,11 @@ You can create a Windows Service and use it via wrun.Proxy
 
 #### Service Configuration
 
-Create a "ini" configuration file.
-Example wrun_service.ini:
+Create a configuration file with python syntax.
+Example settings.py:
 
-    [DEFAULT]
-    EXECUTABLE_PATH = C:\remote_activation
-    LOG_PATH = C:\remote_activation\wrun.log
+    EXECUTABLE_PATH = "C:\remote_activation"
+    LOG_PATH = "C:\remote_activation\wrun.log"
     PORT = 3333
     
 Mandatory settings:
@@ -38,7 +37,7 @@ Optional settings:
 
 Create the Windows Service:
 
-    wrun_service.py <service-name> <absolute-path-to-ini-file>
+    wrun_service.py <service-name> <absolute-path-to-settings-file>
 
 (wrun_service.py is a utility script installed alongside with wrun)
 
