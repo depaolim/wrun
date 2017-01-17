@@ -95,4 +95,3 @@ Some tests will be skipped if PyWin32 is not installed
 
 * Travis-CI
 * hmac
-* configurable logging (rotation, log-level, etc.)
