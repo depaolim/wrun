@@ -33,7 +33,7 @@ Mandatory settings:
 Optional settings:
  * HOST: host name or IP address (default: localhost)
 
-### Advanced Logging
+#### Advanced Logging
 
 You must specify one and only one of the following settings:
  * LOG_PATH: absolute path of the daemon log file
