@@ -1,3 +1,4 @@
+from functools import reduce
 import json
 import logging
 import logging.config
