@@ -26,18 +26,8 @@ class WRUNService(win32serviceutil.ServiceFramework):
     def __init__(self, args):
         self._svc_name_, = args
         settings_file = ServiceParam(self._svc_name_).get()
-        config = Config(settings_file)
-        log_path = getattr(config, 'LOG_PATH', self._svc_name_ + ".log")
-        logging.basicConfig(filename=log_path, level=logging.DEBUG, filemode='a')
+        self.settings = Config(settings_file)
         log.info("WRUNService.__init__ BEGIN")
-        log.info("settings_file '%s'", settings_file)
-        log.info("param LOG_PATH '%s'", log_path)
-        self.executable_path = config.EXECUTABLE_PATH
-        log.info("param EXECUTABLE_PATH '%s'", self.executable_path)
-        self.host = getattr(config, 'HOST', "localhost")
-        log.info("param HOST '%s'", self.host)
-        self.port = config.PORT
-        log.info("param PORT '%s'", self.port)
         win32serviceutil.ServiceFramework.__init__(self, args)
         log.info("WRUNService.__init__ END")
 
@@ -46,7 +36,8 @@ class WRUNService(win32serviceutil.ServiceFramework):
         self.ReportServiceStatus(win32service.SERVICE_START_PENDING)
         # put any start-up code here
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
-        daemon((self.host, self.port), lambda command: executor(self.executable_path, command))
+        s = self.settings
+        daemon((s.HOST, s.PORT), lambda command: executor(s.EXECUTABLE_PATH, command))
         log.info("WRUNService.SvcDoRun END")
 
     def SvcStop(self):
@@ -60,6 +51,7 @@ class WRUNService(win32serviceutil.ServiceFramework):
 if __name__ == '__main__':
     # Service Installation
     service_name, settings_file, = sys.argv[1:]
+    Config(settings_file)
     serviceClassString = win32serviceutil.GetServiceClassString(WRUNService)
     win32serviceutil.InstallService(serviceClassString, service_name, service_name)
     ServiceParam(service_name).set(settings_file)

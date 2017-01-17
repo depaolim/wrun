@@ -8,7 +8,7 @@ import sys
 import time
 import unittest
 
-from wrun import Config, Proxy, client, daemon, executor
+from wrun import BaseConfig, Config, Proxy, client, daemon, executor, log_config
 
 if sys.platform == 'win32':
     EXECUTABLE_NAME = "sample.bat"
@@ -204,11 +204,11 @@ class TestAcceptance(TestCommunication):
                 "returncode": 1})
 
 
-class TestConfig(unittest.TestCase):
+class TestBaseConfig(unittest.TestCase):
     def setUp(self):
         self.config_file = os.path.join(CWD, "settings_test.py")
-        Config.store(self.config_file, OPTION1="OPT1_VALUE", OPTION2="OPT2_VALUE")
-        self.config = Config(self.config_file)
+        BaseConfig.store(self.config_file, OPTION1="OPT1_VALUE", OPTION2="OPT2_VALUE")
+        self.config = BaseConfig(self.config_file, OPTION1="OPT1_DEFAULT", BASE_OPTION="DEFAULT_VALUE")
 
     def tearDown(self):
         os.remove(self.config_file)
@@ -221,6 +221,139 @@ class TestConfig(unittest.TestCase):
 
     def test_unspecified_option_with_default(self):
         self.assertEqual(getattr(self.config, 'OTHER_OPTION', 'other_default'), 'other_default')
+
+    def test_default_option(self):
+        self.assertEqual(self.config.BASE_OPTION, 'DEFAULT_VALUE')
+
+
+class TestLogConfig(unittest.TestCase):
+    class Mock:
+        pass
+
+    def setUp(self):
+        self.calls = []
+        self.mock_params = {
+            "LOG_PATH": lambda p: self.calls.append(("1", p)),
+            "LOG_FILECONFIG": lambda p: self.calls.append(("2", p)),
+            "LOG_DICTCONFIG": None}
+
+    def test_log_path(self):
+        config = self.Mock()
+        config.LOG_PATH = "dummy_log_path"
+        log_config(config, self.mock_params)
+        self.assertEquals(self.calls, [("1", "dummy_log_path")])
+
+    def test_log_fileconfig(self):
+        config = self.Mock()
+        config.LOG_FILECONFIG = "dummy_log_fileconfig"
+        log_config(config, self.mock_params)
+        self.assertEquals(self.calls, [("2", "dummy_log_fileconfig")])
+
+    def test_xor_on_log_settings(self):
+        config = self.Mock()
+        config.LOG_PATH = "dummy_path"
+        config.LOG_FILECONFIG = "dummy_fileconfig"
+        self.assertRaises(AssertionError, log_config, config, self.mock_params)
+
+
+class TestConfig(unittest.TestCase):
+    def setUp(self):
+        self.config_file = os.path.join(CWD, "settings_test.py")
+        open(self.config_file, "w").close()  # reset settings file
+        self.log_file = os.path.join(CWD, "test.log")
+        open(self.log_file, "w").close()  # reset log file
+        self.log_fileconfig = os.path.join(CWD, "log_fileconfig.ini")
+        with open(self.log_fileconfig, "w") as f:
+            f.write("""
+[loggers]
+keys=root, wrun
+
+[handlers]
+keys=hand01
+
+[formatters]
+keys=form01
+
+[logger_root]
+level=NOTSET
+handlers=hand01
+
+[logger_wrun]
+level=NOTSET
+handlers=hand01
+qualname=wrun
+
+[handler_hand01]
+class=FileHandler
+level=NOTSET
+formatter=form01
+args=('{}', 'w')
+
+[formatter_form01]
+format=%(levelname)s-%(name)s %(message)s
+datefmt=
+                """.format(self.log_file.replace('\\', '/')))
+
+    def tearDown(self):
+        os.remove(self.config_file)
+        os.remove(self.log_fileconfig)
+        root = logging.root
+        for h in root.handlers[:]:
+            root.removeHandler(h)
+
+    def assertLogContains(self, msg):
+        self.assertIn(msg, open(self.log_file).read())
+
+    def test_log_path(self):
+        Config.store(self.config_file, LOG_PATH=self.log_file)
+        config = Config(self.config_file)
+        self.assertTrue(config.LOG_PATH)
+        self.assertLogContains("INFO:wrun:settings")
+
+    def test_log_fileconfig(self):
+        Config.store(self.config_file, LOG_FILECONFIG=self.log_fileconfig)
+        config = Config(self.config_file)
+        self.assertTrue(config.LOG_FILECONFIG)
+        self.assertLogContains("INFO-wrun settings \"{\'")
+
+    def test_log_dictconfig(self):
+        Config.store(self.config_file, LOG_DICTCONFIG={
+            "version": 1,
+            'disable_existing_loggers': True,
+            'formatters': {
+                'standard': {
+                    'format': '[%(levelname)s] %(name)s: %(message)s'
+                },
+            },
+            'handlers': {
+                'default': {
+                    'level': 'DEBUG',
+                    'formatter': 'standard',
+                    'class': 'logging.FileHandler',
+                    'filename': self.log_file.replace('\\', '/'),
+                    'mode': 'a',
+                },
+            },
+            'loggers': {
+                '': {
+                    'handlers': ['default'],
+                    'level': 'DEBUG',
+                    'propagate': True
+                },
+                'wrun': {
+                    'handlers': ['default'],
+                    'level': 'DEBUG',
+                    'propagate': True
+                },
+            }
+        })
+        config = Config(self.config_file)
+        self.assertTrue(config.LOG_DICTCONFIG)
+        self.assertLogContains("[INFO] wrun: settings \"{\'")
+
+    def test_xor_on_log_settings(self):
+        Config.store(self.config_file, LOG_PATH=self.log_file, LOG_FILECONFIG=self.log_fileconfig)
+        self.assertRaises(AssertionError, Config, self.config_file)
 
 
 class CommandTestMixin(object):
@@ -257,10 +390,8 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
 
     def test_start(self):
         self._call("sc", "start", self.SERVICE_NAME)
+        self.assertLogContains("win_service", "INFO:wrun:settings \"{'")
         self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.__init__ BEGIN")
-        self.assertLogContains(
-            "win_service", "INFO:wrun_service:param EXECUTABLE_PATH '{}'".format(EXECUTABLE_PATH))
-        self.assertLogContains("win_service", "INFO:wrun_service:param HOST 'localhost'")
         self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.SvcDoRun BEGIN")
 
     def test_stop(self):

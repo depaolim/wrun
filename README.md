@@ -27,11 +27,20 @@ Example settings.py:
     
 Mandatory settings:
  * EXECUTABLE_PATH: absolute path of the executables directory
- * LOG_PATH: absolute path of the daemon log file
+ * LOG_PATH/LOG_FILECONFIG/LOG_DICTCONFIG: log path and configuration
  * PORT: daemon listening port
  
 Optional settings:
  * HOST: host name or IP address (default: localhost)
+
+### Advanced Logging
+
+You must specify one and only one of the following settings:
+ * LOG_PATH: absolute path of the daemon log file
+ * LOG_FILECONFIG: absolute path of the logging ini configuration
+    [https://docs.python.org/2.7/library/logging.config.html#logging.config.fileConfig]
+ * LOG_DICTCONFIG: dictionary with logging configuration
+    [https://docs.python.org/2.7/library/logging.config.html#logging.config.dictConfig]
 
 #### Service Management
 

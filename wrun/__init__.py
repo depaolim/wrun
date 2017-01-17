@@ -1,5 +1,7 @@
 import json
 import logging
+import logging.config
+import operator
 import os
 import runpy
 import socket
@@ -11,9 +13,10 @@ ENCODING = "utf-8"
 log = logging.getLogger(__name__)
 
 
-class Config:
-    def __init__(self, filepath):
+class BaseConfig(object):
+    def __init__(self, filepath, **kwargs):
         attrs = runpy.run_path(filepath)
+        self.__dict__.update(kwargs)
         for setting, setting_value in attrs.items():
             if setting.isupper():
                 setattr(self, setting, setting_value)
@@ -24,6 +27,28 @@ class Config:
             for k, v in kwargs.items():
                 f.write('{} = {}\n'.format(k, repr(v)))
 
+
+class Config(BaseConfig):
+    def __init__(self, filepath):
+        super(Config, self).__init__(filepath, HOST="localhost")
+        log_config(self)
+        log.info("settings_file '%s'", filepath)
+        log.info("settings \"%s\"", self.__dict__)
+
+
+LOGGING_PARAMS = {
+    "LOG_PATH": lambda param: logging.basicConfig(filename=param, level=logging.DEBUG, filemode='a'),
+    "LOG_FILECONFIG": logging.config.fileConfig,
+    "LOG_DICTCONFIG": logging.config.dictConfig,
+}
+
+
+def log_config(config, logging_params=LOGGING_PARAMS):
+    assert reduce(operator.xor, [hasattr(config, k) for k in logging_params], False)
+    for k, f in logging_params.items():
+        if hasattr(config, k):
+            f(getattr(config, k))
+            return
 
 
 class Socket(socket.socket):

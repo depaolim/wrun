@@ -3,7 +3,7 @@ from setuptools import setup
 
 setup(
    name='wrun',
-   version='0.1.3',
+   version='0.1.4',
    description='Run Remote Windows Executables',
    license="MIT",
    author='Marco De Paoli',
