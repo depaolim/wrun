@@ -81,6 +81,15 @@ Sample code:
  
 The client does not need PyWin32
 
+## Disclaimer
+
+USE IT AT YOUR OWN RISK!
+
+This piece of software enables the execution of code on a remote host without any authentication.
+This behaviour is "by definition" a "security hole".
+So you should use "wrun" only on a very reliable environment (ex. completely disconnected LAN)!
+
+
 ## Tests
  
 To run the test cases:
