@@ -87,7 +87,7 @@ USE IT AT YOUR OWN RISK!
 
 This piece of software enables the execution of code on a remote host without any authentication.
 This behaviour is "by definition" a "security hole".
-So you should use "wrun" only on a very reliable environment (ex. completely disconnected LAN)!
+So you should use "wrun" only on a very reliable environment! (ex. completely disconnected LAN ... and a "completely connected brain" (cit c8e)! )
 
 
 ## Tests
