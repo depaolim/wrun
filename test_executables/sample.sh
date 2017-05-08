@@ -2,6 +2,7 @@
 pwd
 if [ $1 == "ERROR" ]
     then
+        >&2 printf 'err_msg %s \n' $1
         exit 1
 fi
 if [ $1 == "INVALID" ]

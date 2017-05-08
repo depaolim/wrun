@@ -31,7 +31,7 @@ class BaseConfig(object):
 
 class Config(BaseConfig):
     def __init__(self, filepath):
-        super(Config, self).__init__(filepath, HOST="localhost")
+        super(Config, self).__init__(filepath, HOST="localhost", COLLECT_STDERR=False)
         log_config(self)
         log.info("settings_file '%s'", filepath)
         log.info("settings \"%s\"", self.__dict__)
@@ -114,18 +114,18 @@ def client(server_address, request):
         log.debug("CLIENT: closed")
 
 
-def executor(exe_path, command):
+def executor(exe_path, command, collect_stderr=False):
     exe_name, args = json.loads(command)
     log.debug("executor %s %s", exe_name, " ".join(args))
     cmd = [os.path.join(exe_path, exe_name)]
     cmd.extend(args)
-    try:
-        out = subprocess.check_output(cmd, cwd=exe_path)
-        returncode = 0
-    except subprocess.CalledProcessError as cpe:
-        out = cpe.output
-        returncode = cpe.returncode
-    return json.dumps({"stdout": out.decode(ENCODING), "returncode": returncode})
+    process = subprocess.Popen(stdout=subprocess.PIPE, stderr=subprocess.PIPE, args=cmd, cwd=exe_path)
+    output, error = process.communicate()
+    retcode = process.poll()
+    results = {"stdout": output.decode(ENCODING), "returncode": retcode}
+    if collect_stderr:
+        results["stderr"] = error.decode(ENCODING)
+    return json.dumps(results)
 
 
 class Proxy:

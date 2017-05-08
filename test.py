@@ -158,6 +158,24 @@ class TestExecutor(unittest.TestCase):
         expected = {"stdout": os.linesep.join([EXECUTABLE_PATH, ""]), "returncode": 1}
         self.assertEqual(json.loads(result), expected)
 
+    def test_run_P1_with_stderr(self):
+        command = [EXECUTABLE_NAME, ["P1"]]
+        result = executor(EXECUTABLE_PATH, json.dumps(command), True)
+        expected = {
+            "stdout": os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]),
+            "stderr": "",
+            "returncode": 0}
+        self.assertEqual(json.loads(result), expected)
+
+    def test_run_ERROR_with_stderr(self):
+        command = [EXECUTABLE_NAME, ["ERROR"]]
+        result = executor(EXECUTABLE_PATH, json.dumps(command), True)
+        expected = {
+            "stdout": os.linesep.join([EXECUTABLE_PATH, ""]),
+            "stderr": os.linesep.join(["err_msg ERROR ", ""]),
+            "returncode": 1}
+        self.assertEqual(json.loads(result), expected)
+
 
 class TestProxy(unittest.TestCase):
     def _mock_client(self, *args):
@@ -367,8 +385,7 @@ class CommandTestMixin(object):
                 raise
 
 
-@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
-class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
+class WinServiceTestBase(CommandTestMixin, LogTestMixin, unittest.TestCase):
     SERVICE_NAME = 'TestWRUN'
     PORT = 3333
 
@@ -388,6 +405,9 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self._call("sc", "delete", self.SERVICE_NAME, ignore_errors=True)
         os.remove(self.settings_file)
 
+
+@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
+class WinServiceTest(WinServiceTestBase):
     def test_start(self):
         self._call("sc", "start", self.SERVICE_NAME)
         self.assertLogContains("win_service", "INFO:wrun:settings \"{'")
@@ -412,6 +432,24 @@ class WinServiceTest(CommandTestMixin, LogTestMixin, unittest.TestCase):
         self._call("sc", "start", self.SERVICE_NAME)
         result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
         self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
+
+
+@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
+class WinServiceTestWithStderr(WinServiceTestBase):
+    def setUp(self):
+        log_path = self.initLog("win_service")
+        self.settings_file = os.path.join(CWD, "settings_test.py")
+        Config.store(
+            self.settings_file, LOG_PATH=log_path, COLLECT_STDERR=True,
+            EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
+        self._call(sys.executable, "wrun_service.py", self.SERVICE_NAME, self.settings_file)
+
+    def test_client_request_error(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"]]))
+        self.assertJsonEqual(
+            result, stdout=os.linesep.join([EXECUTABLE_PATH, ""]),
+            stderr=os.linesep.join(["err_msg ERROR ", ""]), returncode=1)
 
 
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")

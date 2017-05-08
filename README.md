@@ -32,6 +32,7 @@ Mandatory settings:
  
 Optional settings:
  * HOST: host name or IP address (default: localhost)
+ * COLLECT_STDERR: response results contains stderr too (default: False)
 
 #### Advanced Logging
 
