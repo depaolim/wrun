@@ -5,6 +5,11 @@ if [ $1 == "ERROR" ]
         >&2 printf 'err_msg %s \n' $1
         exit 1
 fi
+if [ $1 == "STDIN" ]
+    then
+        echo $(cat)
+        exit 0
+fi
 if [ $1 == "INVALID" ]
     then
         invalid_command

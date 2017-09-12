@@ -62,7 +62,7 @@ Sample code:
     import wrun
     
     client = wrun.Proxy("localhost", 3333)
-    result = client.run("sample.exe", "first-param", "second-param")
+    result = client.run("sample.exe", ["first-param", "second-param"])
     print(result)
     # {"stdout": "OUTPUT", "returncode": 0}
     
@@ -71,13 +71,14 @@ Sample code:
     import wrun
     
     client = wrun.Proxy(<server>, <port>)
-    result = client.run(<executable_name>, <params>*)
+    result = client.run(<executable_name>, [<param1>, <param2>], input_stdin?)
 
  Some constraints:
  
  * server, port: connection parameters for daemon
  * executable_name: name of exe or script available in the EXECUTABLE_PATH of the daemon
- * params: various command line arguments passed to executable
+ * param: command line arguments passed to executable
+ * input_stdin: if specified is passed as stdin to the process
  * result: dictionary with collected stdout and returncode
  
 The client does not need PyWin32

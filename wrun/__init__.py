@@ -115,12 +115,18 @@ def client(server_address, request):
 
 
 def executor(exe_path, command, collect_stderr=False):
-    exe_name, args = json.loads(command)
+    exe_name, args, input_stdin = json.loads(command)
     log.debug("executor %s %s", exe_name, " ".join(args))
     cmd = [os.path.join(exe_path, exe_name)]
     cmd.extend(args)
-    process = subprocess.Popen(stdout=subprocess.PIPE, stderr=subprocess.PIPE, args=cmd, cwd=exe_path)
-    output, error = process.communicate()
+    kwargs = {"stdout": subprocess.PIPE, "stderr": subprocess.PIPE, "args": cmd, "cwd": exe_path}
+    if input_stdin:
+        kwargs["stdin"] = subprocess.PIPE
+    process = subprocess.Popen(**kwargs)
+    kwargs = {}
+    if input_stdin:
+        kwargs["input"] = input_stdin
+    output, error = process.communicate(**kwargs)
     retcode = process.poll()
     results = {"stdout": output.decode(ENCODING), "returncode": retcode}
     if collect_stderr:
@@ -133,6 +139,6 @@ class Proxy:
         self.server_address = (host, port)
         self.client = client
 
-    def run(self, executable_name, *args):
-        result = self.client(self.server_address, json.dumps([executable_name, args]))
+    def run(self, executable_name, args, input_stdin=""):
+        result = self.client(self.server_address, json.dumps([executable_name, args, input_stdin]))
         return json.loads(result)
