@@ -71,13 +71,13 @@ Sample code:
     import wrun
     
     client = wrun.Proxy(<server>, <port>)
-    result = client.run(<executable_name>, [<param1>, <param2>], <input_stdin>?)
+    result = client.run(<executable_name>, <params>, <input_stdin>="")
 
  Some constraints:
  
  * server, port: connection parameters for daemon
  * executable_name: name of exe or script available in the EXECUTABLE_PATH of the daemon
- * param: command line arguments passed to executable
+ * params: list (can be empty) of command line arguments to pass to executable
  * input_stdin: if specified is passed as stdin to the process
  * result: dictionary with collected stdout and returncode
  
