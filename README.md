@@ -71,7 +71,7 @@ Sample code:
     import wrun
     
     client = wrun.Proxy(<server>, <port>)
-    result = client.run(<executable_name>, [<param1>, <param2>], input_stdin?)
+    result = client.run(<executable_name>, [<param1>, <param2>], <input_stdin>?)
 
  Some constraints:
  
