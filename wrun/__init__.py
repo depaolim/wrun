@@ -125,7 +125,7 @@ def executor(exe_path, command, collect_stderr=False):
     process = subprocess.Popen(**kwargs)
     kwargs = {}
     if input_stdin:
-        kwargs["input"] = input_stdin
+        kwargs["input"] = input_stdin.encode(ENCODING)
     output, error = process.communicate(**kwargs)
     retcode = process.poll()
     results = {"stdout": output.decode(ENCODING), "returncode": retcode}

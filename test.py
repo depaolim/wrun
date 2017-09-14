@@ -177,7 +177,7 @@ class TestExecutor(unittest.TestCase):
         self.assertEqual(json.loads(result), expected)
 
     def test_run_with_stdin(self):
-        command = [EXECUTABLE_NAME, ["STDIN"], b"INPUT_STDIN"]
+        command = [EXECUTABLE_NAME, ["STDIN"], "INPUT_STDIN"]
         result = executor(EXECUTABLE_PATH, json.dumps(command))
         expected = {
             "stdout": os.linesep.join([EXECUTABLE_PATH, "INPUT_STDIN", ""]),
@@ -210,7 +210,7 @@ class TestProxy(unittest.TestCase):
     def test_run_with_stdin(self):
         p = Proxy("HOST", "PORT", self._mock_client)
         self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
-        result = p.run("SAMPLE_EXE", [], input_stdin=b"INPUT_STDIN")
+        result = p.run("SAMPLE_EXE", [], input_stdin="INPUT_STDIN")
         self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
         self.assertEqual(self._mock_client_calls, [(('HOST', 'PORT'), '["SAMPLE_EXE", [], "INPUT_STDIN"]')])
 
@@ -281,13 +281,13 @@ class TestLogConfig(unittest.TestCase):
         config = self.Mock()
         config.LOG_PATH = "dummy_log_path"
         log_config(config, self.mock_params)
-        self.assertEquals(self.calls, [("1", "dummy_log_path")])
+        self.assertEqual(self.calls, [("1", "dummy_log_path")])
 
     def test_log_fileconfig(self):
         config = self.Mock()
         config.LOG_FILECONFIG = "dummy_log_fileconfig"
         log_config(config, self.mock_params)
-        self.assertEquals(self.calls, [("2", "dummy_log_fileconfig")])
+        self.assertEqual(self.calls, [("2", "dummy_log_fileconfig")])
 
     def test_xor_on_log_settings(self):
         config = self.Mock()
@@ -342,7 +342,8 @@ datefmt=
             root.removeHandler(h)
 
     def assertLogContains(self, msg):
-        self.assertIn(msg, open(self.log_file).read())
+        with open(self.log_file) as f:
+            self.assertIn(msg, f.read())
 
     def test_log_path(self):
         Config.store(self.config_file, LOG_PATH=self.log_file)
