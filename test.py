@@ -54,7 +54,7 @@ class LogTestMixin(object):
 
     def assertLogMatch(self, action, expected):
         path = self._log_path(action)
-        self.assertRegexpMatches(self._get_log(path), expected)
+        self.assertRegex(self._get_log(path), expected)
 
 
 def ProcessFunc_target(q, f, args):
@@ -339,6 +339,7 @@ datefmt=
         os.remove(self.log_fileconfig)
         root = logging.root
         for h in root.handlers[:]:
+            h.close()
             root.removeHandler(h)
 
     def assertLogContains(self, msg):
