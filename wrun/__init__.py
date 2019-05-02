@@ -5,10 +5,10 @@ import logging.config
 import operator
 import os
 import runpy
-import socket
 import subprocess
 
-BUFFER_SIZE = 255
+from .transport import TCPClient, TCPServer
+
 ENCODING = "utf-8"
 
 log = logging.getLogger(__name__)
@@ -52,66 +52,54 @@ def log_config(config, logging_params=LOGGING_PARAMS):
             return
 
 
-class Socket(socket.socket):
-    def __init__(self):
-        super(Socket, self).__init__(socket.AF_INET, socket.SOCK_STREAM)
+class StringTranslator:
+    encoding = ENCODING
+
+    def decode(self, binary_buffer):
+        return binary_buffer.decode(self.encoding)
+
+    def encode(self, string_buffer):
+        return string_buffer.encode(self.encoding)
 
 
-def daemon(server_address, execute, condition=lambda: True):
-    ss = Socket()
-    ss.bind(server_address)
-    ss.listen(1)
-    try:
-        while condition():
-            log.debug("SERVER: waiting for a connection...")
-            sc, ad = ss.accept()
-            log.debug("SERVER: connection from %s", ad)
-            request = bytes()
-            while True:
-                log.debug("SERVER: receiving...")
-                data = sc.recv(BUFFER_SIZE)
-                log.debug("SERVER: received %s", data)
-                if not data:
-                    log.debug("SERVER: no more data to receive")
-                    break
-                request += data
-            response = execute(request.decode(ENCODING))
-            log.debug("SERVER: sending '%s' ...", response)
-            sc.sendall(response.encode(ENCODING))
-            log.debug("SERVER: sent")
-            log.debug("SERVER: closing client socket...")
-            sc.close()
-            log.debug("SERVER: closed client socket")
-    finally:
-        log.debug("SERVER: closing server socket...")
-        ss.close()
-        log.debug("SERVER: closed server socket")
+class Manservant:
+    """ Interprets and run actions """
+
+    def __init__(self, translator, action):
+        self.translator = translator
+        self.action = action
+
+    def __call__(self, encoded_request):
+        decoded_request = self.translator.decode(encoded_request)
+        decoded_response = self.action(decoded_request)
+        return self.translator.encode(decoded_response)
+
+
+class Client:
+    """ Encode and request actions """
+
+    def __init__(self, translator, channel):
+        self.translator = translator
+        self.channel = channel
+
+    def request(self, request):
+        binary_request = self.translator.encode(request)
+        binary_response = self.channel.request(binary_request)
+        return self.translator.decode(binary_response)
+
+
+def daemon(server_address, action, must_go_on=lambda: True):
+    translate = StringTranslator()
+    manservant = Manservant(translate, action)
+    with TCPServer(server_address, manservant) as channel:
+        channel.serve(must_go_on)
 
 
 def client(server_address, request):
-    ss = Socket()
-    try:
-        log.debug("CLIENT: connecting '%s' ...", server_address)
-        ss.connect(server_address)
-        log.debug("CLIENT: connected")
-        log.debug("CLIENT: sending '%s' ...", request)
-        ss.sendall(request.encode(ENCODING))
-        ss.shutdown(socket.SHUT_WR)
-        log.debug("CLIENT: sent")
-        response = bytes()
-        while True:
-            log.debug("CLIENT: receiving...")
-            data = ss.recv(BUFFER_SIZE)
-            log.debug("CLIENT: received %s", data)
-            if not data:
-                log.debug("CLIENT: no more data to receive")
-                break
-            response += data
-        return response.decode(ENCODING)
-    finally:
-        log.debug("CLIENT: closing...")
-        ss.close()
-        log.debug("CLIENT: closed")
+    translate = StringTranslator()
+    with TCPClient(server_address) as channel:
+        client = Client(translate, channel)
+        return client.request(request)
 
 
 def executor(exe_path, command, collect_stderr=False):

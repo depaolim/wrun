@@ -95,6 +95,8 @@ class TestCommunication(LogTestMixin, unittest.TestCase):
 
 
 def TestClientServer_revert(request):
+    if request == 'BOOM!!!':
+        raise Exception('BOOM!!!')
     return request[::-1]
 
 
@@ -106,7 +108,7 @@ class TestClientServer(TestCommunication):
         self.s.stop(ignore_errors=True)
 
     def test_server_is_listening(self):
-        self.assertLogContains(daemon, "waiting for a connection...")
+        self.assertLogContains(daemon, "waiting for a connection on server socket...")
 
     @unittest.skipIf(sys.platform == 'win32', "no clean shutdown on Windows")
     def test_server_shutdown(self):
@@ -120,20 +122,42 @@ class TestClientServer(TestCommunication):
         self.assertEqual(c.result, "avorp")
         self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
         self.assertLogContains(client, "CLIENT: connected")
-        self.assertLogContains(client, "CLIENT: sending 'prova'")
+        self.assertLogContains(client, "CLIENT: sending b'prova'")
         self.assertLogContains(client, "CLIENT: sent")
         self.assertLogContains(client, "CLIENT: receiving...")
         self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
         self.assertLogContains(daemon, "SERVER: receiving...")
-        self.assertLogMatch(daemon, "SERVER: received (b')?prova'?")
-        self.assertLogMatch(daemon, "SERVER: received (b'')?")
+        self.assertLogContains(daemon, "SERVER: received b'prova'")
+        self.assertLogContains(daemon, "SERVER: received b''")
         self.assertLogContains(daemon, "SERVER: no more data to receive")
-        self.assertLogContains(daemon, "SERVER: sending 'avorp'")
+        self.assertLogContains(daemon, "SERVER: sending b'avorp'")
         self.assertLogContains(daemon, "SERVER: sent")
         self.assertLogContains(daemon, "SERVER: closing client socket")
         self.assertLogContains(daemon, "SERVER: closed client socket")
-        self.assertLogMatch(client, "CLIENT: received (b')?avorp'?")
-        self.assertLogMatch(client, "CLIENT: received (b'')?")
+        self.assertLogContains(client, "CLIENT: received b'avorp'")
+        self.assertLogContains(client, "CLIENT: received b''")
+        self.assertLogContains(client, "CLIENT: no more data to receive")
+        self.assertLogContains(client, "CLIENT: closing")
+        self.assertLogContains(client, "CLIENT: closed")
+
+    def test_client_error_request(self):
+        c = self._run_process_func(client, self.SERVER_ADDRESS, "BOOM!!!")
+        c.join()
+        self.assertEqual(c.result, "")
+        self.assertLogContains(client, "CLIENT: connecting '('localhost', 3333)' ...")
+        self.assertLogContains(client, "CLIENT: connected")
+        self.assertLogContains(client, "CLIENT: sending b'BOOM!!!'")
+        self.assertLogContains(client, "CLIENT: sent")
+        self.assertLogContains(client, "CLIENT: receiving...")
+        self.assertLogContains(daemon, "SERVER: connection from ('127.0.0.1', ")
+        self.assertLogContains(daemon, "SERVER: receiving...")
+        self.assertLogContains(daemon, "SERVER: received b'BOOM!!!'")
+        self.assertLogContains(daemon, "SERVER: received b''")
+        self.assertLogContains(daemon, "SERVER: no more data to receive")
+        self.assertLogContains(daemon, "SERVER: exception in client request processing")
+        self.assertLogContains(daemon, "SERVER: closing client socket")
+        self.assertLogContains(daemon, "SERVER: closed client socket")
+        self.assertLogContains(client, "CLIENT: received b''")
         self.assertLogContains(client, "CLIENT: no more data to receive")
         self.assertLogContains(client, "CLIENT: closing")
         self.assertLogContains(client, "CLIENT: closed")
