@@ -37,7 +37,11 @@ class WRUNService(win32serviceutil.ServiceFramework):
         # put any start-up code here
         self.ReportServiceStatus(win32service.SERVICE_RUNNING)
         s = self.settings
-        daemon((s.HOST, s.PORT), lambda command: executor(s.EXECUTABLE_PATH, command, s.COLLECT_STDERR))
+        secure = getattr(s, "SECURE", {})
+        daemon(
+            (s.HOST, s.PORT), lambda command: executor(s.EXECUTABLE_PATH, command, s.COLLECT_STDERR),
+            **secure
+        )
         log.info("WRUNService.SvcDoRun END")
 
     def SvcStop(self):

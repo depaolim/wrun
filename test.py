@@ -7,6 +7,7 @@ import subprocess
 import sys
 import time
 import unittest
+import unittest.mock
 
 from wrun import BaseConfig, Config, Proxy, client, daemon, executor, log_config
 
@@ -181,8 +182,11 @@ class TestSecureClientServer(TestCommunication):
         self.s.stop(ignore_errors=True)
 
     def test(self):
-        response = client(self.SERVER_ADDRESS, 'ciao', cafile=self.CERFILE)
-        self.assertEqual(response, 'oaic')
+        c = self._run_process_func(client, self.SERVER_ADDRESS, 'ciao', cafile=self.CERFILE)
+        c.join()
+        self.assertEqual(c.result, 'oaic')
+        self.assertLogContains(daemon, "SERVER: securing socket...")
+        self.assertLogContains(client, "CLIENT: securing socket...")
 
 
 class TestExecutor(unittest.TestCase):
@@ -232,33 +236,47 @@ class TestExecutor(unittest.TestCase):
 
 
 class TestProxy(unittest.TestCase):
-    def _mock_client(self, *args):
-        self._mock_client_calls.append(args)
-        return json.dumps(self._mock_client_return_value)
-
     def setUp(self):
+        def _mock_client(*args, **kwargs):
+            self._mock_client_calls.append((args, kwargs))
+            return json.dumps(self._mock_client_return_value)
+
         self._mock_client_calls = []
+        self.patch = unittest.mock.patch("wrun.client", _mock_client)
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
 
     def test_run(self):
-        p = Proxy("HOST", "PORT", self._mock_client)
+        p = Proxy("HOST", "PORT")
         self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
         result = p.run("SAMPLE_EXE", [])
         self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
-        self.assertEqual(self._mock_client_calls, [(('HOST', 'PORT'), '["SAMPLE_EXE", [], ""]')])
+        self.assertEqual(self._mock_client_calls, [((('HOST', 'PORT'), '["SAMPLE_EXE", [], ""]'), {})])
 
     def test_run_with_args(self):
-        p = Proxy("HOST", "PORT", self._mock_client)
+        p = Proxy("HOST", "PORT")
         self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
         result = p.run("SAMPLE_EXE", ["A1", "A2"])
         self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
-        self.assertEqual(self._mock_client_calls, [(('HOST', 'PORT'), '["SAMPLE_EXE", ["A1", "A2"], ""]')])
+        self.assertEqual(self._mock_client_calls, [((('HOST', 'PORT'), '["SAMPLE_EXE", ["A1", "A2"], ""]'), {})])
 
     def test_run_with_stdin(self):
-        p = Proxy("HOST", "PORT", self._mock_client)
+        p = Proxy("HOST", "PORT")
         self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
         result = p.run("SAMPLE_EXE", [], input_stdin="INPUT_STDIN")
         self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
-        self.assertEqual(self._mock_client_calls, [(('HOST', 'PORT'), '["SAMPLE_EXE", [], "INPUT_STDIN"]')])
+        self.assertEqual(self._mock_client_calls, [((('HOST', 'PORT'), '["SAMPLE_EXE", [], "INPUT_STDIN"]'), {})])
+
+    def test_run_secure(self):
+        p = Proxy("HOST", "PORT", cafile="mock_cafile")
+        self._mock_client_return_value = {"stdout": "OUTPUT", "returncode": 0}
+        result = p.run("SAMPLE_EXE", [], input_stdin="INPUT_STDIN")
+        self.assertEqual(result, {"stdout": "OUTPUT", "returncode": 0})
+        self.assertEqual(self._mock_client_calls, [
+            ((('HOST', 'PORT'), '["SAMPLE_EXE", [], "INPUT_STDIN"]'), {"cafile": "mock_cafile"})
+        ])
 
 
 def TestAcceptance_target_executor(command):
@@ -458,16 +476,20 @@ class CommandTestMixin(object):
 class WinServiceTestBase(CommandTestMixin, LogTestMixin, unittest.TestCase):
     SERVICE_NAME = 'TestWRUN'
     PORT = 3333
+    CONFIG = {
+        "EXECUTABLE_PATH": EXECUTABLE_PATH,
+        "HOST": "localhost",
+        "PORT": PORT,
+    }
 
     def assertJsonEqual(self, result, **kwargs):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        log_path = self.initLog("win_service")
+        config = dict(self.CONFIG)
+        config["LOG_PATH"] = self.initLog("win_service")
         self.settings_file = os.path.join(CWD, "settings_test.py")
-        Config.store(
-            self.settings_file, LOG_PATH=log_path,
-            EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
+        Config.store(self.settings_file, **config)
         self._call(sys.executable, "wrun_service.py", self.SERVICE_NAME, self.settings_file)
 
     def tearDown(self):
@@ -502,6 +524,36 @@ class WinServiceTest(WinServiceTestBase):
         self._call("sc", "start", self.SERVICE_NAME)
         result = client(("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["ERROR"], ""]))
         self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, ""]), returncode=1)
+
+
+@unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
+class WinServiceSecureTest(WinServiceTestBase):
+    CONFIG = {
+        **WinServiceTestBase.CONFIG,
+        "SECURE": {
+            "cafile": os.path.join(CWD, os.path.join("demo_ssl", "server.crt")),
+            "keyfile": os.path.join(CWD, os.path.join("demo_ssl", "server.key")),
+        }
+    }
+
+    def test_start(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self.assertLogContains("win_service", "INFO:wrun:settings \"{'")
+        self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.__init__ BEGIN")
+        self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.SvcDoRun BEGIN")
+
+    def test_stop(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        self._call("sc", "stop", self.SERVICE_NAME)
+        self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.SvcStop BEGIN")
+        self.assertLogContains("win_service", "INFO:wrun_service:WRUNService.SvcStop END")
+
+    def test_client_request(self):
+        self._call("sc", "start", self.SERVICE_NAME)
+        result = client(
+            ("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["P1"], ""]),
+            cafile=os.path.join("demo_ssl", "server.crt"))
+        self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
 
 
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")

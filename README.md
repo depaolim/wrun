@@ -33,6 +33,7 @@ Mandatory settings:
 Optional settings:
  * HOST: host name or IP address (default: localhost)
  * COLLECT_STDERR: response results contains stderr too (default: False)
+ * SECURE: a dict with "cafile" and "keyfile", enables secure socket server
 
 #### Advanced Logging
 
@@ -71,6 +72,7 @@ Sample code:
     import wrun
     
     client = wrun.Proxy(<server>, <port>)
+    # client = wrun.Proxy(<server>, <port>, <cafile>)  # for SSL
     result = client.run(<executable_name>, <params>, <input_stdin>="")
 
  Some constraints:

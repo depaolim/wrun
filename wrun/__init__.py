@@ -132,10 +132,9 @@ def executor(exe_path, command, collect_stderr=False):
 
 
 class Proxy:
-    def __init__(self, host, port, client=client):
-        self.server_address = (host, port)
-        self.client = client
+    def __init__(self, host, port, **kwargs):
+        self.client = lambda request: client((host, port), request, **kwargs)
 
     def run(self, executable_name, args, input_stdin=""):
-        result = self.client(self.server_address, json.dumps([executable_name, args, input_stdin]))
+        result = self.client(json.dumps([executable_name, args, input_stdin]))
         return json.loads(result)

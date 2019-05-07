@@ -163,7 +163,7 @@ class SecureTCPServer(TCPServer):
 
     def _listen(self):
         super()._listen()
-        # secure context
+        log.debug("SERVER: securing socket...")
         context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
         context.load_cert_chain(self.cafile, self.keyfile)
         self._server_socket = context.wrap_socket(self._server_socket, server_side=True)
@@ -173,6 +173,7 @@ class SecureTCPClient(TCPClient):
     def __init__(self, *args, **kwargs):
         cafile = kwargs.pop('cafile')
         super().__init__(*args, **kwargs)
+        log.debug("CLIENT: securing socket...")
         context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=cafile)
         context.check_hostname = False
         self._client_socket = context.wrap_socket(self._client_socket)
