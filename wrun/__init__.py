@@ -8,6 +8,7 @@ import runpy
 import subprocess
 
 from .transport import TCPClient, TCPServer
+from .transport import SecureTCPClient, SecureTCPServer
 
 ENCODING = "utf-8"
 
@@ -88,16 +89,24 @@ class Client:
         return self.translator.decode(binary_response)
 
 
-def daemon(server_address, action, must_go_on=lambda: True):
+def daemon(server_address, action, **kwargs):
     translate = StringTranslator()
     manservant = Manservant(translate, action)
-    with TCPServer(server_address, manservant) as channel:
-        channel.serve(must_go_on)
+    if kwargs:
+        server_class = SecureTCPServer
+    else:
+        server_class = TCPServer
+    with server_class(server_address, manservant, **kwargs) as channel:
+        channel.serve()
 
 
-def client(server_address, request):
+def client(server_address, request, **kwargs):
     translate = StringTranslator()
-    with TCPClient(server_address) as channel:
+    if kwargs:
+        client_class = SecureTCPClient
+    else:
+        client_class = TCPClient
+    with client_class(server_address, **kwargs) as channel:
         client = Client(translate, channel)
         return client.request(request)
 

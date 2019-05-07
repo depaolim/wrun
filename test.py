@@ -39,9 +39,9 @@ class LogTestMixin(object):
         logging.FileHandler(path, mode='w').close()  # log cleanup
 
     @classmethod
-    def logged_func(cls, func, *args):
+    def logged_func(cls, func, *args, **kwargs):
         cls._init_log_file(cls._log_path(func))
-        return func(*args)
+        return func(*args, **kwargs)
 
     def initLog(self, action):
         path = self._log_path(action)
@@ -57,20 +57,25 @@ class LogTestMixin(object):
         self.assertRegex(self._get_log(path), expected)
 
 
-def ProcessFunc_target(q, f, args):
-    q.put(f(*args))
+def ProcessFunc_target(q, f, args, kwargs):
+    q.put(f(*args, **kwargs))
 
 
 class ProcessFunc(object):
-    def _kill(self):
+    @staticmethod
+    def kill_process(process):
         if sys.platform == 'win32':
-            self._process.terminate()
+            process.terminate()
         else:
-            os.kill(self._process.pid, signal.SIGINT)
+            os.kill(process.pid, signal.SIGINT)
 
-    def __init__(self, func, *args):
+    def _kill(self):
+        self.kill_process(self._process)
+
+    def __init__(self, func, *args, **kwargs):
         self._queue = multiprocessing.Queue()
-        self._process = multiprocessing.Process(target=ProcessFunc_target, args=(self._queue, func, args))
+        self._process = multiprocessing.Process(
+            target=ProcessFunc_target, args=(self._queue, func, args, kwargs))
         self._process.start()
         time.sleep(0.5)
 
@@ -90,8 +95,8 @@ class ProcessFunc(object):
 class TestCommunication(LogTestMixin, unittest.TestCase):
     SERVER_ADDRESS = ('localhost', 3333)
 
-    def _run_process_func(self, func, *args):
-        return ProcessFunc(self.logged_func, func, *args)
+    def _run_process_func(self, func, *args, **kwargs):
+        return ProcessFunc(self.logged_func, func, *args, **kwargs)
 
 
 def TestClientServer_revert(request):
@@ -161,6 +166,23 @@ class TestClientServer(TestCommunication):
         self.assertLogContains(client, "CLIENT: no more data to receive")
         self.assertLogContains(client, "CLIENT: closing")
         self.assertLogContains(client, "CLIENT: closed")
+
+
+class TestSecureClientServer(TestCommunication):
+    SERVER_ADDRESS = ('localhost', 3333)
+    CERFILE = os.path.join("demo_ssl", "server.crt")
+    KEYFILE = os.path.join("demo_ssl", "server.key")
+
+    def setUp(self):
+        self.s = self._run_process_func(
+            daemon, self.SERVER_ADDRESS, TestClientServer_revert, cafile=self.CERFILE, keyfile=self.KEYFILE)
+
+    def tearDown(self):
+        self.s.stop(ignore_errors=True)
+
+    def test(self):
+        response = client(self.SERVER_ADDRESS, 'ciao', cafile=self.CERFILE)
+        self.assertEqual(response, 'oaic')
 
 
 class TestExecutor(unittest.TestCase):

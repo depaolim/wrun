@@ -1,7 +1,8 @@
 import logging
 import socket
+import ssl
 
-BUFFER_SIZE = 255
+BUFFER_SIZE = 4096
 
 log = logging.getLogger(__name__)
 
@@ -46,19 +47,21 @@ class TCPServer:
         self.server_address = server_address
         self.action = action
         self.build_handler = build_handler
-        self.server_socket = Socket()
+        self._server_socket = Socket()
 
     def _bind(self):
         log.debug("SERVER: bind server socket...")
-        self.server_socket.bind(self.server_address)
+        self._server_socket.bind(self.server_address)
+        self.server_address = self._server_socket.getsockname()
+        log.debug("SERVER: binded server socket to '%s", self.server_address)
 
     def _listen(self):
         log.debug("SERVER: listen on server socket...")
-        self.server_socket.listen(1)
+        self._server_socket.listen(1)
 
     def _accept(self):
         log.debug("SERVER: waiting for a connection on server socket...")
-        return self.server_socket.accept()
+        return self._server_socket.accept()
 
     def open(self):
         self._bind()
@@ -66,7 +69,7 @@ class TCPServer:
 
     def close(self):
         log.debug("SERVER: closing server socket...")
-        self.server_socket.close()
+        self._server_socket.close()
         log.debug("SERVER: closed server socket")
 
     def process(self):
@@ -80,11 +83,12 @@ class TCPServer:
             log.exception("SERVER: exception in client request processing")
         finally:
             log.debug("SERVER: closing client socket...")
+            sc.shutdown(socket.SHUT_WR)
             sc.close()
             log.debug("SERVER: closed client socket")
 
-    def serve(self, must_go_on=lambda: True):
-        while must_go_on():
+    def serve(self):
+        while True:
             self.process()
 
     def __enter__(self):
@@ -102,29 +106,32 @@ class TCPServer:
 class TCPClient:
     def __init__(self, server_address):
         self.server_address = server_address
-        self._client = Socket()
+        self._client_socket = Socket()
 
     def open(self):
         log.debug("CLIENT: connecting '%s' ...", self.server_address)
-        self._client.connect(self.server_address)
+        self._client_socket.connect(self.server_address)
         log.debug("CLIENT: connected")
 
     def close(self):
         log.debug("CLIENT: closing...")
-        self._client.close()
+        self._client_socket.close()
         log.debug("CLIENT: closed")
 
     def send(self, request):
         log.debug("CLIENT: sending %s ...", request)
-        self._client.sendall(request)
-        self._client.shutdown(socket.SHUT_WR)
+        self._client_socket.sendall(request)
+        # !!! we need to call the base method because
+        # the SSLSocket.shutdown removes SSL wrapper from socket
+        # see https://bugs.python.org/issue18880
+        Socket.shutdown(self._client_socket, socket.SHUT_WR)
         log.debug("CLIENT: sent")
 
     def receive(self):
         response = bytes()
         while True:
             log.debug("CLIENT: receiving...")
-            data = self._client.recv(BUFFER_SIZE)
+            data = self._client_socket.recv(BUFFER_SIZE)
             log.debug("CLIENT: received %s", data)
             if not data:
                 log.debug("CLIENT: no more data to receive")
@@ -146,3 +153,26 @@ class TCPClient:
 
     def __exit__(self, *args):
         self.close()
+
+
+class SecureTCPServer(TCPServer):
+    def __init__(self, *args, **kwargs):
+        self.cafile = kwargs.pop('cafile')
+        self.keyfile = kwargs.pop('keyfile')
+        super().__init__(*args, **kwargs)
+
+    def _listen(self):
+        super()._listen()
+        # secure context
+        context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+        context.load_cert_chain(self.cafile, self.keyfile)
+        self._server_socket = context.wrap_socket(self._server_socket, server_side=True)
+
+
+class SecureTCPClient(TCPClient):
+    def __init__(self, *args, **kwargs):
+        cafile = kwargs.pop('cafile')
+        super().__init__(*args, **kwargs)
+        context = ssl.create_default_context(ssl.Purpose.SERVER_AUTH, cafile=cafile)
+        context.check_hostname = False
+        self._client_socket = context.wrap_socket(self._client_socket)

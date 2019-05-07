@@ -102,6 +102,20 @@ To run the test cases:
  
 Some tests will be skipped if PyWin32 is not installed
 
+
+### Test Certificates:
+
+To rebuild the demo certificates:
+
+```
+cd demo_ssl
+export WRUN_DEMO_PWD=x1234
+openssl genrsa -des3 -passout pass:$WRUN_DEMO_PWD -out server.orig.key 2048
+openssl rsa -passin pass:$WRUN_DEMO_PWD -in server.orig.key -out server.key
+openssl req -new -key server.key -out server.csr -subj "/C=IT/emailAddress=depaolim@gmail.com"
+openssl x509 -req -days 358000 -in server.csr -signkey server.key -out server.crt
+```
+
 ## TODO
 
 * Travis-CI
