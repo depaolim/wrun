@@ -283,16 +283,20 @@ def TestAcceptance_target_executor(command):
     return executor(EXECUTABLE_PATH, command)
 
 
+def TestAcceptance_run_client(server_address, executable_name, args):
+    p = Proxy(*server_address)
+    return p.run(executable_name, args)
+
+
 class TestAcceptance(TestCommunication):
     def setUp(self):
         self.s = self._run_process_func(daemon, self.SERVER_ADDRESS, TestAcceptance_target_executor)
-        self.p = Proxy(*self.SERVER_ADDRESS)
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
 
     def test_client_request(self):
-        c = self._run_process_func(self.p.run, EXECUTABLE_NAME, ["P1"])
+        c = self._run_process_func(TestAcceptance_run_client, self.SERVER_ADDRESS, EXECUTABLE_NAME, ["P1"])
         c.join()
         self.assertEqual(
             c.result, {
@@ -300,7 +304,7 @@ class TestAcceptance(TestCommunication):
                 "returncode": 0})
 
     def test_client_request_error(self):
-        c = self._run_process_func(self.p.run, EXECUTABLE_NAME, ["ERROR"])
+        c = self._run_process_func(TestAcceptance_run_client, self.SERVER_ADDRESS, EXECUTABLE_NAME, ["ERROR"])
         c.join()
         self.assertEqual(
             c.result, {

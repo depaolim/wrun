@@ -100,7 +100,7 @@ To run the test cases:
 
     git clone https://github.com/depaolim/wrun
     cd wrun
-    python test.py
+    python -m unittest discover
  
 Some tests will be skipped if PyWin32 is not installed
 
