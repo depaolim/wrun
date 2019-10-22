@@ -100,7 +100,7 @@ To run the test cases:
 
     git clone https://github.com/depaolim/wrun
     cd wrun
-    python -m unittest discover
+    python -m unittest discover tests
  
 Some tests will be skipped if PyWin32 is not installed
 
@@ -110,7 +110,7 @@ Some tests will be skipped if PyWin32 is not installed
 To rebuild the demo certificates:
 
 ```
-cd demo_ssl
+cd tests/demo_ssl
 export WRUN_DEMO_PWD=x1234
 openssl genrsa -des3 -passout pass:$WRUN_DEMO_PWD -out server.orig.key 2048
 openssl rsa -passin pass:$WRUN_DEMO_PWD -in server.orig.key -out server.key

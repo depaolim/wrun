@@ -18,6 +18,7 @@ else:
 
 CWD = os.path.dirname(os.path.realpath(__file__))
 EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
+SSL_PATH = os.path.join(CWD, "demo_ssl")
 
 
 class LogTestMixin(object):
@@ -171,8 +172,8 @@ class TestClientServer(TestCommunication):
 
 class TestSecureClientServer(TestCommunication):
     SERVER_ADDRESS = ('localhost', 3333)
-    CERFILE = os.path.join("demo_ssl", "server.crt")
-    KEYFILE = os.path.join("demo_ssl", "server.key")
+    CERFILE = os.path.join(SSL_PATH, "server.crt")
+    KEYFILE = os.path.join(SSL_PATH, "server.key")
 
     def setUp(self):
         self.s = self._run_process_func(
@@ -535,8 +536,8 @@ class WinServiceSecureTest(WinServiceTestBase):
     CONFIG = {
         **WinServiceTestBase.CONFIG,
         "SECURE": {
-            "cafile": os.path.join(CWD, os.path.join("demo_ssl", "server.crt")),
-            "keyfile": os.path.join(CWD, os.path.join("demo_ssl", "server.key")),
+            "cafile": os.path.join(SSL_PATH, "server.crt"),
+            "keyfile": os.path.join(SSL_PATH, "server.key"),
         }
     }
 
@@ -556,7 +557,7 @@ class WinServiceSecureTest(WinServiceTestBase):
         self._call("sc", "start", self.SERVICE_NAME)
         result = client(
             ("localhost", self.PORT), json.dumps([EXECUTABLE_NAME, ["P1"], ""]),
-            cafile=os.path.join("demo_ssl", "server.crt"))
+            cafile=os.path.join(SSL_PATH, "server.crt"))
         self.assertJsonEqual(result, stdout=os.linesep.join([EXECUTABLE_PATH, "hello P1", ""]), returncode=0)
 
 
