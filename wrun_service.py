@@ -1,4 +1,5 @@
 import logging
+import os
 import sys
 
 import win32service
@@ -58,4 +59,4 @@ if __name__ == '__main__':
     Config(settings_file)
     serviceClassString = win32serviceutil.GetServiceClassString(WRUNService)
     win32serviceutil.InstallService(serviceClassString, service_name, service_name)
-    ServiceParam(service_name).set(settings_file)
+    ServiceParam(service_name).set(os.path.abspath(settings_file))
