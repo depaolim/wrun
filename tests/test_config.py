@@ -1,6 +1,8 @@
 import logging
 import os
+import subprocess
 import sys
+import time
 
 
 if sys.platform == 'win32':
@@ -11,6 +13,15 @@ else:
 CWD = os.path.dirname(os.path.realpath(__file__))
 EXECUTABLE_PATH = os.path.join(CWD, "test_executables")
 SSL_PATH = os.path.join(CWD, "demo_ssl")
+
+
+def subprocess_check_call(args, ignore_errors=False):
+    try:
+        subprocess.check_call(args)
+        time.sleep(0.5)
+    except subprocess.CalledProcessError:
+        if not ignore_errors:
+            raise
 
 
 class LogTestMixin(object):

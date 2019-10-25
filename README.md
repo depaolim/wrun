@@ -48,9 +48,9 @@ You must specify one and only one of the following settings:
 
 Create the Windows Service:
 
-    wrun_service.py <service-name> <absolute-path-to-settings-file>
+    wrun_server.py install <service-name> <absolute-path-to-settings-file>
 
-(wrun_service.py is a utility script installed alongside with wrun)
+(wrun_server.py is a utility script installed alongside with wrun)
 
 Start/Stop/Delete the service:
 
@@ -100,9 +100,14 @@ To run the test cases:
 
     git clone https://github.com/depaolim/wrun
     cd wrun
-    python -m unittest discover tests
+    python -m unittest
  
 Some tests will be skipped if PyWin32 is not installed
+
+To run tests on Windows you need to install the package in developer mode:
+
+    pip install -e .
+    python -m unittest tests.test_win_service
 
 
 ### Test Certificates:

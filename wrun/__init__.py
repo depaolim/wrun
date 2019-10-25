@@ -138,3 +138,24 @@ class Proxy:
     def run(self, executable_name, args, input_stdin=""):
         result = self.client(json.dumps([executable_name, args, input_stdin]))
         return json.loads(result)
+
+
+class Service:
+    def __init__(self, settings_file):
+        self.settings = Config(settings_file)
+
+    def start(self):
+        # put any start-up code here
+        pass
+
+    def run(self):
+        s = self.settings
+        secure = getattr(s, "SECURE", {})
+        daemon(
+            (s.HOST, s.PORT), lambda command: executor(s.EXECUTABLE_PATH, command, s.COLLECT_STDERR),
+            **secure
+        )
+
+    def stop(self):
+        # put any clean-up code here
+        pass
