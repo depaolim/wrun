@@ -2,6 +2,7 @@ import os
 import pydoc
 import sys
 import time
+import threading
 import unittest
 
 try:
@@ -17,7 +18,7 @@ LOG_FILE = os.path.join(os.path.dirname(__file__), "win.log")
 
 def log(*msgs):
     with open(LOG_FILE, "a") as fo:
-        fo.write("\n".join(msgs) + "\n")
+        fo.write("{}.{}: {}\n".format(os.getpid(), threading.get_ident(), " - ".join(msgs)))
 
 
 def log_read():
@@ -37,21 +38,21 @@ class MockService:
     def __init__(self, settings_file):
         log("__init__", settings_file)
         self.settings_file = settings_file
-        self.is_running = False
+        self.is_running = threading.Event()
 
     def start(self):
         log("START")
-        self.is_running = True
+        self.is_running.set()
 
     def run(self):
         log("RUN begin", self.settings_file)
-        while self.is_running:
+        while self.is_running.is_set():
             time.sleep(0.1)
-            log("RUN step {}".format(self.is_running))
+            log("RUN step {}".format(self.is_running.is_set()))
         log("RUN end")
 
     def stop(self):
-        self.is_running = False
+        self.is_running.clear()
         log("STOP begin")
         time.sleep(0.5)
         log("STOP end")
