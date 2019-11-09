@@ -11,7 +11,7 @@ try:
 except ModuleNotFoundError:
     pass
 
-from tests.test_config import *
+from tests.config import *
 
 LOG_FILE = os.path.join(os.path.dirname(__file__), "win.log")
 
@@ -121,6 +121,7 @@ class WinServiceInstall(unittest.TestCase):
     def tearDown(self):
         subprocess_check_call(["sc", "delete", self.SERVICE_NAME], ignore_errors=True)
         os.remove("dummy_settings.py")
+        os_remove("test_install.log")
 
     def test_install_with_absolute_path(self):
         subprocess_check_call([sys.executable, "wrun_server.py", "install", self.SERVICE_NAME, "dummy_settings.py"])

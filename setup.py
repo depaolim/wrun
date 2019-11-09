@@ -11,5 +11,5 @@ setup(
    url="https://github.com/depaolim/wrun",
    packages=['wrun'],
    install_requires=[],  # external packages as dependencies
-   scripts=['wrun_service.py']
+   scripts=['wrun_server.py']
 )

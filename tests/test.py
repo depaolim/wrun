@@ -10,7 +10,7 @@ import unittest.mock
 
 from wrun import BaseConfig, Config, Proxy, client, daemon, executor, log_config
 
-from tests.test_config import *
+from tests.config import *
 
 
 def ProcessFunc_target(q, f, args, kwargs):
@@ -67,6 +67,8 @@ class TestClientServer(TestCommunication):
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
+        os_remove(os.path.join(CWD, "test_daemon.log"))
+        os_remove(os.path.join(CWD, "test_client.log"))
 
     def test_server_is_listening(self):
         self.assertLogContains(daemon, "waiting for a connection on server socket...")
@@ -135,6 +137,8 @@ class TestSecureClientServer(TestCommunication):
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
+        os_remove(os.path.join(CWD, "test_daemon.log"))
+        os_remove(os.path.join(CWD, "test_client.log"))
 
     def test(self):
         c = self._run_process_func(client, self.SERVER_ADDRESS, 'ciao', cafile=self.CERFILE)
@@ -249,6 +253,8 @@ class TestAcceptance(TestCommunication):
 
     def tearDown(self):
         self.s.stop(ignore_errors=True)
+        os_remove(os.path.join(CWD, "test_daemon.log"))
+        os_remove(os.path.join(CWD, "test_TestAcceptance_run_client.log"))
 
     def test_client_request(self):
         c = self._run_process_func(TestAcceptance_run_client, self.SERVER_ADDRESS, EXECUTABLE_NAME, ["P1"])
@@ -274,7 +280,7 @@ class TestBaseConfig(unittest.TestCase):
         self.config = BaseConfig(self.config_file, OPTION1="OPT1_DEFAULT", BASE_OPTION="DEFAULT_VALUE")
 
     def tearDown(self):
-        os.remove(self.config_file)
+        os_remove(self.config_file)
 
     def test_specified_option(self):
         self.assertEqual(self.config.OPTION1, 'OPT1_VALUE')
@@ -322,9 +328,8 @@ class TestLogConfig(unittest.TestCase):
 class TestConfig(unittest.TestCase):
     def setUp(self):
         self.config_file = os.path.join(CWD, "settings_test.py")
-        open(self.config_file, "w").close()  # reset settings file
         self.log_file = os.path.join(CWD, "test.log")
-        open(self.log_file, "w").close()  # reset log file
+        open(self.log_file, "w").close()  # file reset
         self.log_fileconfig = os.path.join(CWD, "log_fileconfig.ini")
         with open(self.log_fileconfig, "w") as f:
             f.write("""
@@ -358,12 +363,17 @@ datefmt=
                 """.format(self.log_file.replace('\\', '/')))
 
     def tearDown(self):
-        os.remove(self.config_file)
-        os.remove(self.log_fileconfig)
-        root = logging.root
-        for h in root.handlers[:]:
+        os_remove(self.log_fileconfig)
+        self._remove_handlers(logging.root)
+        self._remove_handlers(logging.getLogger("wrun"))
+        os_remove(self.config_file)
+        os_remove(self.log_file)
+
+    def _remove_handlers(self, logger):
+        handlers = list(logger.handlers)
+        for h in handlers:
             h.close()
-            root.removeHandler(h)
+            logger.removeHandler(h)
 
     def assertLogContains(self, msg):
         with open(self.log_file) as f:

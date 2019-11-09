@@ -3,7 +3,7 @@ import unittest
 
 from wrun import Config, client
 
-from tests.test_config import *
+from tests.config import *
 
 
 class WinServiceTestBase(LogTestMixin, unittest.TestCase):
@@ -19,9 +19,10 @@ class WinServiceTestBase(LogTestMixin, unittest.TestCase):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        config = dict(self.CONFIG)
-        config["LOG_PATH"] = self.initLog("win_service")
+        self.log_file = self._log_path("win_service")
         self.settings_file = os.path.join(CWD, "settings_test.py")
+        config = dict(self.CONFIG)
+        config["LOG_PATH"] = self.log_file
         Config.store(self.settings_file, **config)
         subprocess_check_call([sys.executable, "wrun_server.py", "install", self.SERVICE_NAME, self.settings_file])
 
@@ -29,6 +30,7 @@ class WinServiceTestBase(LogTestMixin, unittest.TestCase):
         subprocess_check_call(["sc", "stop", self.SERVICE_NAME], ignore_errors=True)
         subprocess_check_call(["sc", "delete", self.SERVICE_NAME], ignore_errors=True)
         os.remove(self.settings_file)
+        os_remove(self.log_file)
 
 
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
@@ -92,10 +94,10 @@ class WinServiceSecureTest(WinServiceTestBase):
 @unittest.skipIf(sys.platform != 'win32', "Windows Service tests need Windows")
 class WinServiceTestWithStderr(WinServiceTestBase):
     def setUp(self):
-        log_path = self.initLog("win_service")
+        self.log_file = self._log_path("win_service")
         self.settings_file = os.path.join(CWD, "settings_test.py")
         Config.store(
-            self.settings_file, LOG_PATH=log_path, COLLECT_STDERR=True,
+            self.settings_file, LOG_PATH=self.log_file, COLLECT_STDERR=True,
             EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=self.PORT)
         subprocess_check_call([sys.executable, "wrun_server.py", "install", self.SERVICE_NAME, self.settings_file])
 
@@ -115,15 +117,15 @@ class DoubleWinServiceTest(LogTestMixin, unittest.TestCase):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        log_path_1 = self.initLog("win_service_1")
-        log_path_2 = self.initLog("win_service_2")
+        self.log_path_1 = self._log_path("win_service_1")
+        self.log_path_2 = self._log_path("win_service_2")
         self.settings_file_1 = os.path.join(CWD, "settings_test_1.py")
         Config.store(
-            self.settings_file_1, LOG_PATH=log_path_1,
+            self.settings_file_1, LOG_PATH=self.log_path_1,
             EXECUTABLE_PATH=EXECUTABLE_PATH, HOST="localhost", PORT=3333)
         self.settings_file_2 = os.path.join(CWD, "settings_test_2.py")
         Config.store(
-            self.settings_file_2, LOG_PATH=log_path_2,
+            self.settings_file_2, LOG_PATH=self.log_path_2,
             EXECUTABLE_PATH=self.EXECUTABLE_PATH_2, HOST="localhost", PORT=3334)
         subprocess_check_call([sys.executable, "wrun_server.py", "install", "TestWRUN_1", self.settings_file_1])
         subprocess_check_call([sys.executable, "wrun_server.py", "install", "TestWRUN_2", self.settings_file_2])
@@ -135,6 +137,8 @@ class DoubleWinServiceTest(LogTestMixin, unittest.TestCase):
         subprocess_check_call(["sc", "delete", "TestWRUN_2"], ignore_errors=True)
         os.remove(self.settings_file_1)
         os.remove(self.settings_file_2)
+        os_remove(self.log_path_1)
+        os_remove(self.log_path_2)
 
     def test_double_client_request(self):
         subprocess_check_call(["sc", "start", "TestWRUN_1"])

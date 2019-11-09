@@ -24,6 +24,14 @@ def subprocess_check_call(args, ignore_errors=False):
             raise
 
 
+def os_remove(path, ignore_errors=True):
+    try:
+        os.remove(path)
+    except FileNotFoundError:
+        if not ignore_errors:
+            raise
+
+
 class LogTestMixin(object):
     CWD = CWD
 

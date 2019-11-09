@@ -4,7 +4,7 @@ import unittest
 
 from wrun import Config, client
 
-from tests.test_config import *
+from tests.config import *
 
 
 class TestTwoServers(LogTestMixin, unittest.TestCase):
@@ -14,8 +14,8 @@ class TestTwoServers(LogTestMixin, unittest.TestCase):
         self.assertEqual(json.loads(result), kwargs)
 
     def setUp(self):
-        log_path_1 = self.initLog("server_1")
-        log_path_2 = self.initLog("server_2")
+        log_path_1 = self._log_path("server_1")
+        log_path_2 = self._log_path("server_2")
         self.settings_file_1 = os.path.join(CWD, "settings_test_1.py")
         Config.store(
             self.settings_file_1, LOG_PATH=log_path_1,
@@ -34,6 +34,8 @@ class TestTwoServers(LogTestMixin, unittest.TestCase):
         self.proc_2.wait()
         os.remove(self.settings_file_1)
         os.remove(self.settings_file_2)
+        os_remove(os.path.join(CWD, "test_server_1.log"))
+        os_remove(os.path.join(CWD, "test_server_2.log"))
 
     def test_double_client_request(self):
         time.sleep(0.5)
